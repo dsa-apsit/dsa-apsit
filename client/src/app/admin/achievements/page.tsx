@@ -130,7 +130,7 @@ export default function AchievementPage() {
 
       <div className="flex flex-col gap-8">
         {items.map((item) => (
-          <div key={item._id} className="border p-5 flex gap-6">
+          <div key={item._id} className="border p-5 flex flex-col md:flex-row gap-6">
             <img src={item.imgUrl} className="w-40 h-40 object-cover border shrink-0" />
 
             <div className="flex-1 flex flex-col gap-3">
