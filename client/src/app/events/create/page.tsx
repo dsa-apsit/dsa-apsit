@@ -186,7 +186,7 @@ const CreateEvent = () => {
   }
 
   return (
-    <section className="min-h-screen flex justify-center px-6 py-20 text-black">
+    <section className="min-h-screen flex justify-center px-6 py-20 text-white [mask-image:linear-gradient(to_bottom,white)] bg-[#131F43] ">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

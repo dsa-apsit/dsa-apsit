@@ -30,7 +30,7 @@ const EventsPage = () => {
   }
 
   return (
-    <section className=" min-h-screen mt-10 mb-2">
+    <section className=" min-h-screen mb-2  text-white [mask-image:linear-gradient(to_bottom,white)] bg-[#131F43]">
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 pt-12">
         {eventData && eventData.map((event, i) => (

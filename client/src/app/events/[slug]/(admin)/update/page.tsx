@@ -10,7 +10,7 @@ const UpdateEventPage = async ({ params }: { params: Promise<{ slug: string }> }
     const { data }: { data: { event: EventType } } = await axiosInstance.get(`/events/${slug}`);
 
     return (
-      <section className=" min-h-[70vh] flex justify-center items-center">
+      <section className=" min-h-[70vh] flex justify-center items-center   text-white [mask-image:linear-gradient(to_bottom,white)] bg-[#131F43]">
         <UpdateEventDetails event={data.event} />
       </section>
     );

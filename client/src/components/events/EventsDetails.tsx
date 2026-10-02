@@ -37,7 +37,7 @@ const EventsDetails = ({ event }: { event: EventType }) => {
   };
 
   return (
-    <div className="min-h-screen flex justify-center px-6 py-20">
+    <div className="min-h-screen flex justify-center px-6 py-20 ">
       <div className="absolute inset-0 -z-10 text-black" />
 
       <section className="min-h-[80vh] w-[90vw]">
@@ -56,23 +56,23 @@ const EventsDetails = ({ event }: { event: EventType }) => {
 
             <div className="flex flex-col md:flex-row gap-4">
               <div>
-                <span className="text-xs uppercase text-gray-600">Date</span>
+                <span className="text-xs uppercase text-gray-300">Date</span>
                 <p>{event.date}</p>
               </div>
 
               <div>
-                <span className="text-xs uppercase text-gray-600">Time</span>
+                <span className="text-xs uppercase text-gray-300">Time</span>
                 <p>{event.time}</p>
               </div>
 
               <div>
-                <span className="text-xs uppercase text-gray-600">Venue</span>
+                <span className="text-xs uppercase text-gray-300">Venue</span>
                 <p>{event.venue}</p>
               </div>
             </div>
 
             <div>
-              <h2 className="uppercase text-xs text-gray-600 mb-2">Speakers</h2>
+              <h2 className="uppercase text-xs text-gray-300 mb-2">Speakers</h2>
 
               {event.speakers.map((speaker, index) => (
                 <p key={`${speaker} ${index}`} className="leading-7 whitespace-pre-line">
@@ -82,13 +82,13 @@ const EventsDetails = ({ event }: { event: EventType }) => {
             </div>
 
             <div>
-              <h2 className="uppercase text-xs text-gray-600 mb-2">About</h2>
+              <h2 className="uppercase text-xs text-gray-300 mb-2">About</h2>
 
               <p className="leading-7 whitespace-pre-line">{event.description}</p>
             </div>
 
             <div>
-              <h2 className="uppercase text-sm text-gray-600 mb-2">Tags</h2>
+              <h2 className="uppercase text-sm text-gray-300 mb-2">Tags</h2>
 
               <div className="flex flex-wrap gap-2">
                 {event.tags.map((tag) => (
@@ -101,7 +101,7 @@ const EventsDetails = ({ event }: { event: EventType }) => {
 
             {event.externalLinks.length > 0 && (
               <div>
-                <h2 className="uppercase text-sm text-gray-600 mb-2">Helpful Links</h2>
+                <h2 className="uppercase text-sm text-gray-300 mb-2">Helpful Links</h2>
 
                 <div className="flex flex-col gap-2">
                   {event.externalLinks.length > 0 &&

@@ -135,7 +135,7 @@ const AttendancePage = ({ params }: { params: Promise<{ slug: string }> }) => {
   };
 
   return (
-    <section className="w-[90vw] min-h-[80vh] py-10 mx-auto">
+    <section className="w-screen min-h-[80vh] p-5 pt-20 md:p-20  text-white [mask-image:linear-gradient(to_bottom,white)] bg-[#131F43]">
       <div className="flex flex-col lg:flex-row gap-16">
         {/* LEFT - Scanner */}
         <div className="w-full lg:w-[35%] flex flex-col gap-8">

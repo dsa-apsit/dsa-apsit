@@ -246,7 +246,7 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
                 title: e.target.value,
               }))
             }
-            className="cursor-target w-full bg-transparent border-0 border-b-2 border-black outline-none text-lg font-bold"
+            className="cursor-target w-full bg-transparent border-gray-600 border-0 border-b text-white [mask-image:linear-gradient(to_bottom,white)] bg-[#131F43] outline-none text-lg font-bold"
           />
 
           <label className="uppercase text-sm opacity-60 underline underline-offset-2 text-red-500 cursor-target">
@@ -282,7 +282,7 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
                   banner: e.target.value,
                 }))
               }
-              className="cursor-target w-full mt-4 bg-transparent border-0 border-b-2 border-black outline-none text-lg font-bold"
+              className="cursor-target w-full mt-4 bg-transparent border-0 border-b-2 border-gray-600 outline-none text-lg font-bold"
             />
           </div>
         </motion.div>
@@ -290,7 +290,7 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
         {/* Meta */}
         <div className="flex flex-wrap gap-8">
           <input
-            className="cursor-target flex-1 min-w-[150px] border-0 border-b-2 border-black bg-transparent outline-none"
+            className="cursor-target flex-1 min-w-[150px] border-0 border-b-2 border-gray-600 bg-transparent outline-none"
             placeholder="Date"
             name="date"
             value={editState.date}
@@ -303,7 +303,7 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
           />
 
           <input
-            className="cursor-target w-40 border-0 border-b-2 border-black bg-transparent outline-none"
+            className="cursor-target w-40 border-0 border-b-2 border-gray-600 bg-transparent outline-none"
             placeholder="Time"
             name="time"
             value={editState.time}
@@ -316,7 +316,7 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
           />
 
           <input
-            className="cursor-target flex-1 min-w-[180px] border-0 border-b-2 border-black bg-transparent outline-none"
+            className="cursor-target flex-1 min-w-[180px] border-0 border-b-2 border-gray-600 bg-transparent outline-none"
             placeholder="Venue"
             name="venue"
             value={editState.venue}
@@ -343,7 +343,7 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
                 description: e.target.value,
               }))
             }
-            className="w-full min-h-20 resize-none bg-transparent border-0 border-b-2 border-black outline-none"
+            className="w-full min-h-20 resize-none bg-transparent border-0 border-b-2 border-gray-600 outline-none"
           />
         </div>
 
@@ -362,7 +362,7 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
                 })
               }
               placeholder="ai, workshop, backend"
-              className="cursor-target w-full border-0 border-b-2 border-black bg-transparent outline-none"
+              className="cursor-target w-full border-0 border-b-2 border-gray-600 bg-transparent outline-none"
             />
           </div>
 
@@ -379,7 +379,7 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
                 })
               }
               placeholder="John, Jane..."
-              className="cursor-target w-full border-0 border-b-2 border-black bg-transparent outline-none"
+              className="cursor-target w-full border-0 border-b-2 border-gray-600 bg-transparent outline-none"
             />
           </div>
         </div>
@@ -398,7 +398,7 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
                 feedbackLink: e.target.value,
               })
             }
-            className="w-full bg-transparent border-0 border-b-2 border-black outline-none font-bold cursor-target"
+            className="w-full bg-transparent border-0 border-b-2 border-gray-600 outline-none font-bold cursor-target"
           />
         </div>
 
@@ -472,7 +472,7 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
                   updated[index] = { ...updated[index], name: e.target.value };
                   setEditState((p) => ({ ...p, externalLinks: updated }));
                 }}
-                className="cursor-target w-full md:flex-1 border-0 border-b-2 border-black bg-transparent outline-none"
+                className="cursor-target w-full md:flex-1 border-0 border-b-2 border-gray-600 bg-transparent outline-none"
               />
 
               <div className="flex items-center gap-3 w-full md:flex-[2]">
@@ -485,7 +485,7 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
                     updated[index] = { ...updated[index], link: e.target.value };
                     setEditState((p) => ({ ...p, externalLinks: updated }));
                   }}
-                  className="cursor-target flex-1 border-0 border-b-2 border-black bg-transparent outline-none"
+                  className="cursor-target flex-1 border-0 border-b-2 border-gray-600 bg-transparent outline-none"
                 />
 
                 <button
@@ -512,44 +512,44 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
             whileTap={{ scale: 0.97 }}
             disabled={disable}
             onClick={updateEvents}
-            className="cursor-target border-b-2 border-black text-xl uppercase tracking-wide"
+            className="cursor-target border-b-2 border-gray-600 text-xl uppercase tracking-wide"
           >
             Update →
           </motion.button>
         </div>
 
-        <div className="mt-5 pt-2 border-t border-white/10">
+        <div className="mt-5 pt-2 border-t border-gray-600/10">
           <h2 className="text-sm uppercase tracking-widest opacity-60 mb-8">Event Actions</h2>
 
           <div className="flex flex-wrap gap-x-10 gap-y-6">
             <button
               onClick={downloadRegistrationList}
-              className="cursor-target border-b-2 border-black hover:opacity-70 transition"
+              className="cursor-target border-b-2 border-gray-600 hover:opacity-70 transition"
             >
               Download Registration List
             </button>
 
             <button
               onClick={downloadAttendanceList}
-              className="cursor-target border-b-2 border-black hover:opacity-70 transition"
+              className="cursor-target border-b-2 border-gray-600 hover:opacity-70 transition"
             >
               Download Attendance List
             </button>
 
             <button
               onClick={registrationToggle}
-              className="cursor-target border-b-2 border-black text-red-400 hover:opacity-70 transition"
+              className="cursor-target border-b-2 border-gray-600 text-red-400 hover:opacity-70 transition"
             >
               {editState.canRegister ? "Close" : "Open"} Registration
             </button>
 
-            <Link href="attendance" className="cursor-target border-b-2 border-black hover:opacity-70 ">
+            <Link href="attendance" className="cursor-target border-b-2 border-gray-600 hover:opacity-70 ">
               Mark Attendance
             </Link>
 
             <Link
               href={`feedback?link=${editState.feedbackLink}`}
-              className="cursor-target border-b-2 border-black hover:opacity-70 "
+              className="cursor-target border-b-2 border-gray-600 hover:opacity-70 "
             >
               Start Feedback
             </Link>

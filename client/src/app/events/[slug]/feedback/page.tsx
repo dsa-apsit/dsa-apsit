@@ -11,7 +11,7 @@ const FeedbackPage = () => {
   const [link, setLink] = useState<string>(params.get("link") || "");
 
   return (
-    <section className="min-h-screen flex justify-center items-center px-6">
+    <section className="min-h-screen flex justify-center items-center px-6   text-white [mask-image:linear-gradient(to_bottom,white)] bg-[#131F43]">
       <div className="w-full max-w-5xl flex flex-col items-center gap-10">
         <h1 className="text-4xl md:text-6xl font-bold uppercase tracking-wide">Feedback</h1>
 

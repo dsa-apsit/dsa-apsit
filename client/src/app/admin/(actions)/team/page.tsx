@@ -59,7 +59,7 @@ const ManageMembers = () => {
             <div>
               <h1 className="text-5xl font-bold uppercase">Members</h1>
 
-              <p className="mt-3 text-xs uppercase text-gray-600">Manage organization members</p>
+              <p className="mt-3 text-xs uppercase text-gray-300">Manage organization members</p>
             </div>
 
             <div className="flex flex-col gap-6">
@@ -68,11 +68,11 @@ const ManageMembers = () => {
                 placeholder="Moodle ID"
                 value={inputData.moodleID}
                 onChange={(e) => setInputData((p) => ({ ...p, moodleID: e.target.value }))}
-                className="border-0 border-b-2 border-black bg-transparent outline-none"
+                className="border-0 border-b-2 border-white bg-transparent outline-none"
               />
 
               <select
-                className="flex-1 min-w-[180px] border-0 border-b-2 border-black bg-transparent outline-none uppercase text-lg"
+                className="flex-1 min-w-[180px] border-0 border-b-2 border-white bg-transparent outline-none uppercase text-lg"
                 value={inputData.role}
                 onChange={(e) =>
                   setInputData((p) => ({
@@ -81,12 +81,12 @@ const ManageMembers = () => {
                   }))
                 }
               >
-                <option className="" disabled value="">
+                <option className="bg-black" disabled value="">
                   Roles
                 </option>
 
                 {["USER", "ORGANIZOR", "ADMIN"].map((role) => (
-                  <option key={role} value={role} className="">
+                  <option key={role} value={role} className="bg-black border">
                     {role}
                   </option>
                 ))}
@@ -95,13 +95,13 @@ const ManageMembers = () => {
               <div className="flex gap-8">
                 <button
                   onClick={updateMember}
-                  className="cursor-target border-b-2 border-black text-red-600 hover:opacity-70 transition"
+                  className="cursor-target border-b-2 border-white text-red-600 hover:opacity-70 transition"
                 >
-                  Update Member
+                  Update User Role
                 </button>
               </div>
 
-              <p className="text-xs text-gray-600 leading-6">
+              <p className="text-xs text-gray-300 leading-6">
                 Members can edit the organization, create events and manage registrations.
               </p>
             </div>
@@ -112,13 +112,13 @@ const ManageMembers = () => {
             <div>
               <h2 className="text-3xl font-semibold uppercase">Current Members</h2>
 
-              <p className="mt-2 text-xs uppercase text-gray-600">{displayMembers.length} Members</p>
+              <p className="mt-2 text-xs uppercase text-gray-300">{displayMembers.length} Members</p>
             </div>
 
             {displayMembers.length ? (
               <table className="w-full border-collapse uppercase">
                 <thead>
-                  <tr className="border-y border-black text-left text-xs">
+                  <tr className="border-y border-white text-left text-xs">
                     <th className="px-4 py-3 font-normal">Name</th>
                     <th className="px-4 py-3 font-normal">Role</th>
                     <th className="px-4 py-3 font-normal">Moodle ID</th>
@@ -127,7 +127,7 @@ const ManageMembers = () => {
 
                 <tbody>
                   {displayMembers.map((member) => (
-                    <tr key={member._id} className="cursor-target border-b border-black">
+                    <tr key={member._id} className="cursor-target border-b border-white">
                       <td className="px-4 py-5">{member.name}</td>
                       <td className="px-4 py-5">{member.role}</td>
                       <td className="px-4 py-5">{member.moodleID}</td>
@@ -136,8 +136,8 @@ const ManageMembers = () => {
                 </tbody>
               </table>
             ) : (
-              <div className="border-t border-black pt-6">
-                <span className="text-gray-600">No members added yet.</span>
+              <div className="border-t border-white pt-6">
+                <span className="text-gray-300">No members added yet.</span>
               </div>
             )}
           </div>
