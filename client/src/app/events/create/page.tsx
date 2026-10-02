@@ -10,9 +10,9 @@ import axiosInstance from "@/services/axios";
 import { toasty } from "@/components/ToastProvider";
 
 import { useUserStore } from "@/store/user";
-import LoadingPage from "@/app/loading";
 import NotFound from "@/app/not-found";
 import { TrashIcon } from "lucide-react";
+import { useLoadingStore } from "@/store/loading";
 
 export type EventType = {
   _id: string;
@@ -28,14 +28,12 @@ export type EventType = {
   tags: string[];
   externalLinks: { name: string; link: string }[];
   slug: string;
+  feedbackLink: string;
 
   // filters
   allowedYears: string[];
   allowedDepartments: string[];
   allowedDivisions: string[];
-
-  // org info
-  organizationID: string;
 
   // data handling of students
   registerdStudentsID: string[];
@@ -43,6 +41,10 @@ export type EventType = {
   //bools to hide/show certain action for the user
   canRegister: boolean;
   isPublic: boolean;
+
+  //metadata
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export const initialEventState: EventType = {
@@ -58,8 +60,7 @@ export const initialEventState: EventType = {
   description: "",
   tags: ["example1", "example2"],
   externalLinks: [],
-
-  organizationID: "",
+  feedbackLink: "",
 
   canRegister: false,
   isPublic: false,
@@ -74,30 +75,25 @@ export const initialEventState: EventType = {
 const CreateEvent = () => {
   const [editState, setEditState] = useState<EventType>(initialEventState);
 
-  const [disable, setDisable] = useState(false);
-
   const [isAdmin, setAdmin] = useState(false);
 
   const [commaInputs, setCommaInputs] = useState<{ tags: string; speakers: string }>({ tags: "", speakers: "" });
 
   const { user } = useUserStore();
+  const { loading, setLoading } = useLoadingStore();
 
   useEffect(() => {
-    if (!user || user.role === "USER") {
+    if (!user || user.role === "USER" || user.role === "ORGNIZOR") {
       return setAdmin(false);
     }
 
     setAdmin(true);
   }, [user]);
 
-  useEffect(() => {
-    console.log({ editState, commaInputs });
-  }, [editState, commaInputs]);
-
   const router = useRouter();
 
   const allowedYears = ["FE", "SE", "TE", "BE"];
-  const allowedDepartments = ["COMP", "DS", "AIML", "CIVIL", "MECH"];
+  const allowedDepartments = ["COMP", "DS", "AIML", "CIVIL", "MECH", "IT"];
   const allowedDivisions = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
 
   const handleAllowedYears = (value: string, checked: boolean) => {
@@ -131,14 +127,13 @@ const CreateEvent = () => {
   };
 
   const hostEvent = async () => {
-    setDisable(true);
+    setLoading(true);
     try {
       // submit the data
       const { data }: { data: { event: EventType } } = await axiosInstance.post(
         `/events`,
         {
           ...editState,
-          organizationID: user!.organizationID[0]._id,
           tags: commaInputs.tags.split(","),
           speakers: commaInputs.speakers.split(","),
         },
@@ -149,17 +144,18 @@ const CreateEvent = () => {
 
       toasty("event created successfully");
 
-      router.push(`/events?search=${data.event.slug}`);
+      router.push(`/events/${data.event.slug}`);
     } catch (error: any) {
-      console.log(error.message || error);
-      if (error.message.response.data.errors.length > 0) {
-        return error.response.data.errors.map((err: { path: string; message: string }) => toasty(err.message));
+      if (error.response.data.errors.length > 0) {
+        return error.response.data.errors.map((err: { path: string; message: string }) =>
+          toasty(`${err.path}, ${err.message}`),
+        );
       }
 
-      toasty(error.response.data.message);
+      toasty("failed to create event");
       return;
     } finally {
-      setDisable(false);
+      setLoading(false);
     }
   };
 
@@ -171,10 +167,15 @@ const CreateEvent = () => {
 
       const formData = new FormData();
       formData.append("image", file);
+      formData.append("path", "events");
 
       const { data } = await axiosInstance.post("/image-to-url", formData);
 
       return data.url;
+    } catch {
+      (error: any) => {
+        toasty(error.message || "failed to upload image");
+      };
     } finally {
       setUploading(false);
     }
@@ -185,9 +186,7 @@ const CreateEvent = () => {
   }
 
   return (
-    <section className="relative min-h-screen flex justify-center px-6 py-20">
-      <div className="absolute inset-0 -z-10 bg-[#131F43] [mask-image:linear-gradient(to_bottom,white,transparent)]" />
-
+    <section className="min-h-screen flex justify-center px-6 py-20 text-black">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -211,38 +210,40 @@ const CreateEvent = () => {
                 title: e.target.value,
               })
             }
-            className="w-full bg-transparent border-0 border-b outline-none text-5xl font-bold"
+            className="w-full bg-transparent border-0 border-b-2 border-black outline-none text-5xl font-bold cursor-target"
           />
+          <label className="uppercase text-sm opacity-60 underline underline-offset-2 text-red-500 cursor-target">
+            Tap here to Upload New Banner image
+            <input
+              type="file"
+              accept="image/*"
+              disabled={uploading}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
 
-          <input
-            type="file"
-            accept="image/*"
-            disabled={uploading}
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
+                try {
+                  const url = await uploadImage(file);
 
-              try {
-                const url = await uploadImage(file);
+                  setEditState((prev) => ({
+                    ...prev,
+                    banner: url,
+                  }));
 
-                setEditState((prev) => ({
-                  ...prev,
-                  banner: url,
-                }));
-
-                toasty("Banner uploaded");
-              } catch (error: any) {
-                toasty(error.response?.data?.message || "Upload failed");
-              }
-            }}
-            className="w-full mt-4 file:mr-4 file:border-0 file:bg-transparent"
-          />
+                  toasty("Banner uploaded");
+                } catch (error: any) {
+                  toasty(error.response?.data?.message || "Upload failed");
+                }
+              }}
+              className="hidden w-full mt-4 file:mr-4 file:border-0 file:bg-transparent cursor-target"
+            />
+          </label>
         </motion.div>
 
         {/* Meta */}
         <div className="flex flex-wrap gap-8">
           <input
-            className="flex-1 min-w-[150px] border-0 border-b bg-transparent outline-none"
+            className="flex-1 min-w-[150px] border-0 border-b-2 border-black bg-transparent outline-none cursor-target"
             placeholder="Date"
             name="date"
             value={editState.date}
@@ -255,7 +256,7 @@ const CreateEvent = () => {
           />
 
           <input
-            className="w-40 border-0 border-b bg-transparent outline-none"
+            className="w-40 border-0 border-b-2 border-black bg-transparent outline-none cursor-target"
             placeholder="Time"
             name="time"
             value={editState.time}
@@ -268,7 +269,7 @@ const CreateEvent = () => {
           />
 
           <input
-            className="flex-1 min-w-[180px] border-0 border-b bg-transparent outline-none"
+            className="flex-1 min-w-[180px] border-0 border-b-2 border-black bg-transparent outline-none cursor-target"
             placeholder="Venue"
             name="venue"
             value={editState.venue}
@@ -281,9 +282,25 @@ const CreateEvent = () => {
           />
         </div>
 
+        <div>
+          <p className="uppercase text-sm">Feedback Link</p>
+          <input
+            name="feedback Link"
+            placeholder="Feedback Link"
+            value={editState.feedbackLink}
+            onChange={(e) =>
+              setEditState({
+                ...editState,
+                feedbackLink: e.target.value,
+              })
+            }
+            className="w-full bg-transparent border-0 border-b-2 border-black outline-none font-bold cursor-target"
+          />
+        </div>
+
         {/* Description */}
         <div className="flex flex-col gap-3">
-          <p className="uppercase text-sm opacity-60">Description</p>
+          <p className="uppercase text-sm">Description</p>
 
           <textarea
             name="description"
@@ -295,14 +312,14 @@ const CreateEvent = () => {
                 description: e.target.value,
               })
             }
-            className="w-full min-h-20 resize-none bg-transparent border-0 border-b outline-none"
+            className="w-full min-h-20 resize-none bg-transparent border-0 border-b-2 border-black outline-none cursor-target"
           />
         </div>
 
         {/* Tags & Speakers */}
         <div className="flex flex-wrap gap-10">
           <div className="flex-1 min-w-[250px]">
-            <p className="uppercase text-sm opacity-60 mb-3">Tags</p>
+            <p className="uppercase text-sm mb-3">Tags</p>
 
             <input
               name="tags"
@@ -314,12 +331,12 @@ const CreateEvent = () => {
                 })
               }
               placeholder="ai, workshop, backend"
-              className="w-full border-0 border-b bg-transparent outline-none"
+              className="w-full border-0 border-b-2 border-black bg-transparent outline-none cursor-target"
             />
           </div>
 
           <div className="flex-1 min-w-[250px]">
-            <p className="uppercase text-sm opacity-60 mb-3">Speakers</p>
+            <p className="uppercase text-sm mb-3">Speakers</p>
 
             <input
               name="speakers"
@@ -331,7 +348,7 @@ const CreateEvent = () => {
                 })
               }
               placeholder="John, Jane..."
-              className="w-full border-0 border-b bg-transparent outline-none"
+              className="w-full border-0 border-b-2 border-black bg-transparent outline-none cursor-target"
             />
           </div>
         </div>
@@ -339,11 +356,11 @@ const CreateEvent = () => {
         {/* Departments */}
 
         <div className="flex flex-col gap-4">
-          <h2 className="uppercase text-sm opacity-60">Allowed Departments</h2>
+          <h2 className="uppercase text-sm">Allowed Departments</h2>
 
           <div className="flex flex-wrap gap-x-8 gap-y-3">
             {allowedDepartments.map((dept) => (
-              <label key={dept} className="flex items-center gap-2 cursor-pointer">
+              <label key={dept} className="flex items-center gap-2 cursor-pointer cursor-target">
                 <input
                   type="checkbox"
                   checked={editState.allowedDepartments.includes(dept)}
@@ -359,11 +376,11 @@ const CreateEvent = () => {
         {/* Years */}
 
         <div className="flex flex-col gap-4">
-          <h2 className="uppercase text-sm opacity-60">Allowed Years</h2>
+          <h2 className="uppercase text-sm">Allowed Years</h2>
 
           <div className="flex flex-wrap gap-x-8 gap-y-3">
             {allowedYears.map((year) => (
-              <label key={year} className="flex items-center gap-2 cursor-pointer">
+              <label key={year} className="flex items-center gap-2 cursor-target">
                 <input
                   type="checkbox"
                   checked={editState.allowedYears.includes(year)}
@@ -379,11 +396,11 @@ const CreateEvent = () => {
         {/* Divisions */}
 
         <div className="flex flex-col gap-4">
-          <h2 className="uppercase text-sm opacity-60">Allowed Divisions</h2>
+          <h2 className="uppercase text-sm">Allowed Divisions</h2>
 
           <div className="flex flex-wrap gap-x-8 gap-y-3">
             {allowedDivisions.map((div) => (
-              <label key={div} className="flex items-center gap-2 cursor-pointer">
+              <label key={div} className="flex items-center gap-2 cursor-target">
                 <input
                   type="checkbox"
                   checked={editState.allowedDivisions.includes(div)}
@@ -398,7 +415,7 @@ const CreateEvent = () => {
 
         {/* External Links */}
         <div className="flex flex-col gap-4">
-          <h2 className="uppercase text-sm opacity-60">Helpful Links</h2>
+          <h2 className="uppercase text-sm">Helpful Links</h2>
 
           <div className="flex flex-col gap-6">
             {editState.externalLinks.map((item, index) => (
@@ -412,7 +429,7 @@ const CreateEvent = () => {
                     updated[index] = { ...updated[index], name: e.target.value };
                     setEditState({ ...editState, externalLinks: updated });
                   }}
-                  className="flex-1 border-0 border-b bg-transparent outline-none"
+                  className="flex-1 border-0 border-b-2 border-black bg-transparent outline-none cursor-target"
                 />
 
                 <input
@@ -424,7 +441,7 @@ const CreateEvent = () => {
                     updated[index] = { ...updated[index], link: e.target.value };
                     setEditState({ ...editState, externalLinks: updated });
                   }}
-                  className="flex-[2] border-0 border-b bg-transparent outline-none"
+                  className="flex-[2] border-0 border-b-2 border-black bg-transparent outline-none cursor-target"
                 />
 
                 <button
@@ -437,7 +454,7 @@ const CreateEvent = () => {
                   }
                   className="opacity-60 hover:opacity-100 transition"
                 >
-                  <TrashIcon size={18} />
+                  <TrashIcon className="cursor-target m-2" size={18} />
                 </button>
               </div>
             ))}
@@ -452,7 +469,7 @@ const CreateEvent = () => {
                   externalLinks: [...editState.externalLinks, { name: "", link: "" }],
                 })
               }
-              className="border-b uppercase tracking-wide"
+              className="border-b-2 border-black uppercase tracking-wide"
             >
               + Add Link
             </button>
@@ -465,9 +482,9 @@ const CreateEvent = () => {
           <motion.button
             whileHover={{ x: 6 }}
             whileTap={{ scale: 0.97 }}
-            disabled={disable}
+            disabled={loading}
             onClick={hostEvent}
-            className="border-b text-xl uppercase tracking-wide"
+            className="border-b-2 border-black text-xl uppercase tracking-wide cursor-target"
           >
             Publish →
           </motion.button>

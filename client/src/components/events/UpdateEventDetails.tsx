@@ -14,41 +14,16 @@ import NotFound from "@/app/not-found";
 import { TrashIcon } from "lucide-react";
 import Link from "next/link";
 
-import download from "downloadjs"
+import download from "downloadjs";
 
-export type EventType = {
-  _id: string;
-  title: string;
-  date: string; // change to Date
-  day: string; // change to Date
-
-  time: string;
-  banner: string;
-  venue: string;
-  speakers: string[];
-  description: string;
-  tags: string[];
-  externalLinks: { name: string; link: string }[];
-  slug: string;
-
-  // filters
-  allowedYears: string[];
-  allowedDepartments: string[];
-  allowedDivisions: string[];
-
-  // org info
-  organizationID: string;
-
-  // data handling of students
-  registerdStudentsID: string[];
-
-  //bools to hide/show certain action for the user
-  canRegister: boolean;
-  isPublic: boolean;
-};
+import { EventType } from "@/app/events/create/page";
 
 const UpdateEventDetails = ({ event }: { event: EventType }) => {
   const [editState, setEditState] = useState<EventType>({ ...event });
+  const [eventStat, setEventStat] = useState<{ registerdStudentsID: number; attendedStudentsID: number }>({
+    registerdStudentsID: 0,
+    attendedStudentsID: 0,
+  });
 
   const [disable, setDisable] = useState(false);
 
@@ -62,21 +37,34 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
   const { user } = useUserStore();
 
   useEffect(() => {
-    if (!user || user.role === "USER") {
+    if (!user) {
       return setAdmin(false);
     }
-
-    setAdmin(true);
+    setAdmin(["ADMIN", "ORGANIZOR"].includes(user.role));
   }, [user]);
 
   useEffect(() => {
-    console.log({ editState, commaInputs });
-  }, [editState, commaInputs]);
+    const fetchEventStat = async () => {
+      try {
+        const { data } = await axiosInstance.get(`/events/${editState.slug}/stat`, { withCredentials: true });
+
+        setEventStat({
+          registerdStudentsID: data.event.registerdStudentsID.length,
+          attendedStudentsID: data.event.attendedStudentsID.length,
+        });
+      } catch (error: any) {
+        console.log(error.response);
+        toasty(error.response.data.message);
+      }
+    };
+
+    fetchEventStat();
+  }, []);
 
   const router = useRouter();
 
   const allowedYears = ["FE", "SE", "TE", "BE"];
-  const allowedDepartments = ["COMP", "DS", "AIML", "CIVIL", "MECH"];
+  const allowedDepartments = ["COMP", "DS", "AIML", "CIVIL", "MECH", "IT"];
   const allowedDivisions = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
 
   const handleAllowedYears = (value: string, checked: boolean) => {
@@ -109,6 +97,28 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
     }
   };
 
+  const [uploading, setUploading] = useState(false);
+
+  const uploadImage = async (file: File) => {
+    try {
+      setUploading(true);
+
+      const formData = new FormData();
+      formData.append("image", file);
+      formData.append("path", "events");
+
+      const { data } = await axiosInstance.post("/image-to-url", formData);
+
+      setEditState((p) => ({ ...p, banner: data.url }));
+    } catch {
+      (error: any) => {
+        toasty(error.message || "failed to upload image");
+      };
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const updateEvents = async () => {
     setDisable(true);
     try {
@@ -117,7 +127,6 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
         `/events/${event._id}`,
         {
           ...editState,
-          organizationID: user!.organizationID[0]._id,
           tags: commaInputs.tags.split(","),
           speakers: commaInputs.speakers.split(","),
         },
@@ -128,48 +137,58 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
 
       toasty("event updated successfully");
 
-      router.push(`/events?search=${data.event.slug}`);
+      router.push(`/events/${data.event.slug}`);
     } catch (error: any) {
-      console.log(error.message || error);
-      if (error.message.response.data.errors.length > 0) {
-        return error.response.data.errors.map((err: { path: string; message: string }) => toasty(err.message));
+      toasty(error.response.data.message);
+
+      if (error.response.data.errors.length > 0) {
+        return error.response.data.errors.map((err: { path: string; message: string }) =>
+          toasty(`${err.path}, ${err.message}`),
+        );
       }
 
-      toasty(error.response.data.message);
       return;
     } finally {
       setDisable(false);
     }
   };
 
-
-
-
   const downloadAttendanceList = async () => {
     try {
       if (!editState?._id) throw new Error("try again, failed to get event id");
+
       const res = await axiosInstance.get(`/events/${editState._id}/attended`, {
         withCredentials: true,
         responseType: "blob",
       });
-
-      download(res.data, "attendance-list.csv", "text/csv");
+      download(
+        res.data,
+        `attendance-list-${editState.slug}.xlsx`,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
     } catch (error: any) {
-      toasty(error.response.data.message || "failed to get your list");
+      toasty("Failed to get your list");
     }
   };
 
   const downloadRegistrationList = async () => {
     try {
-      if (!editState?._id) throw new Error("try again, failed to get event id");
+      if (!editState?._id) {
+        throw new Error("try again, failed to get event id");
+      }
+
       const res = await axiosInstance.get(`/events/${editState._id}/register`, {
         withCredentials: true,
         responseType: "blob",
       });
 
-      download(res.data, "registration-list.csv", "text/csv");
+      download(
+        res.data,
+        `registration-list-${editState.slug}.xlsx`,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
     } catch (error: any) {
-      toasty(error.response.data.message || "failed to get your list");
+      toasty("Failed to get your list");
     }
   };
 
@@ -183,7 +202,6 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
         `/events/${event._id}`,
         {
           canRegister: !editState.canRegister,
-          organizationID: user.organizationID[0]._id,
         },
         {
           withCredentials: true,
@@ -203,9 +221,7 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
   }
 
   return (
-    <section className="relative min-h-screen w-screen flex justify-center px-6 py-20">
-      <div className="absolute inset-0 -z-10 bg-[#131F43] [mask-image:linear-gradient(to_bottom,white,transparent)]" />
-
+    <section className="min-h-screen w-screen flex justify-center px-6 py-20">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -214,76 +230,101 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
       >
         {/* Heading */}
         <div>
-          <h1 className="text-5xl font-bold uppercase">Update an Event</h1>
+          <h1 className="text-xl md:text-5xl font-bold uppercase">Update an Event</h1>
         </div>
 
         {/* Title */}
         <motion.div variants={{}} initial="hidden" animate="visible">
+          <p className="uppercase text-sm opacity-60">Title</p>
           <input
             name="title"
             placeholder="Event Title"
             value={editState.title}
             onChange={(e) =>
-              setEditState({
-                ...editState,
+              setEditState((p) => ({
+                ...p,
                 title: e.target.value,
-              })
+              }))
             }
-            className="w-full bg-transparent border-0 border-b outline-none text-5xl font-bold"
+            className="cursor-target w-full bg-transparent border-0 border-b-2 border-black outline-none text-lg font-bold"
           />
 
-          <input
-            name="banner"
-            placeholder="Banner Link"
-            value={editState.banner}
-            onChange={(e) =>
-              setEditState({
-                ...editState,
-                banner: e.target.value,
-              })
-            }
-            className="w-full mt-4 bg-transparent border-0 border-b outline-none text-5xl font-bold"
-          />
+          <label className="uppercase text-sm opacity-60 underline underline-offset-2 text-red-500 cursor-target">
+            Tap here to Upload New Banner image
+            <input
+              type="file"
+              accept="image/*"
+              disabled={uploading}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+
+                try {
+                  const url = await uploadImage(file);
+
+                  toasty("Banner uploaded");
+                } catch (error: any) {
+                  toasty(error.response?.data?.message || "Upload failed");
+                }
+              }}
+              className="hidden w-full mt-4 file:mr-4 file:border-0 file:bg-transparent cursor-target"
+            />
+          </label>
+          <div className="flex-col w-full">
+            <p className="uppercase text-sm opacity-60">Banner Image URL</p>
+            <input
+              name="banner"
+              placeholder="Banner Link"
+              value={editState.banner}
+              onChange={(e) =>
+                setEditState((p) => ({
+                  ...p,
+                  banner: e.target.value,
+                }))
+              }
+              className="cursor-target w-full mt-4 bg-transparent border-0 border-b-2 border-black outline-none text-lg font-bold"
+            />
+          </div>
         </motion.div>
 
         {/* Meta */}
         <div className="flex flex-wrap gap-8">
           <input
-            className="flex-1 min-w-[150px] border-0 border-b bg-transparent outline-none"
+            className="cursor-target flex-1 min-w-[150px] border-0 border-b-2 border-black bg-transparent outline-none"
             placeholder="Date"
             name="date"
             value={editState.date}
             onChange={(e) =>
-              setEditState({
-                ...editState,
+              setEditState((p) => ({
+                ...p,
                 date: e.target.value,
-              })
+              }))
             }
           />
 
           <input
-            className="w-40 border-0 border-b bg-transparent outline-none"
+            className="cursor-target w-40 border-0 border-b-2 border-black bg-transparent outline-none"
             placeholder="Time"
             name="time"
             value={editState.time}
             onChange={(e) =>
-              setEditState({
-                ...editState,
+              setEditState((p) => ({
+                ...p,
                 time: e.target.value,
-              })
+              }))
             }
           />
 
           <input
-            className="flex-1 min-w-[180px] border-0 border-b bg-transparent outline-none"
+            className="cursor-target flex-1 min-w-[180px] border-0 border-b-2 border-black bg-transparent outline-none"
             placeholder="Venue"
             name="venue"
             value={editState.venue}
             onChange={(e) =>
-              setEditState({
-                ...editState,
+              setEditState((p) => ({
+                ...p,
                 venue: e.target.value,
-              })
+              }))
             }
           />
         </div>
@@ -297,12 +338,12 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
             value={editState.description}
             placeholder="Tell people about your event..."
             onChange={(e) =>
-              setEditState({
-                ...editState,
+              setEditState((p) => ({
+                ...p,
                 description: e.target.value,
-              })
+              }))
             }
-            className="w-full min-h-20 resize-none bg-transparent border-0 border-b outline-none"
+            className="w-full min-h-20 resize-none bg-transparent border-0 border-b-2 border-black outline-none"
           />
         </div>
 
@@ -321,7 +362,7 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
                 })
               }
               placeholder="ai, workshop, backend"
-              className="w-full border-0 border-b bg-transparent outline-none"
+              className="cursor-target w-full border-0 border-b-2 border-black bg-transparent outline-none"
             />
           </div>
 
@@ -338,13 +379,30 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
                 })
               }
               placeholder="John, Jane..."
-              className="w-full border-0 border-b bg-transparent outline-none"
+              className="cursor-target w-full border-0 border-b-2 border-black bg-transparent outline-none"
             />
           </div>
         </div>
 
-        {/* Departments */}
+        {/* FEEDBACK LINK  */}
+        <div>
+            <p className="uppercase text-sm opacity-60">Feedback Link</p>
 
+          <input
+            name="feedback Link"
+            placeholder="Feedback Link"
+            value={editState.feedbackLink}
+            onChange={(e) =>
+              setEditState({
+                ...editState,
+                feedbackLink: e.target.value,
+              })
+            }
+            className="w-full bg-transparent border-0 border-b-2 border-black outline-none font-bold cursor-target"
+          />
+        </div>
+
+        {/* Departments */}
         <div className="flex flex-col gap-4">
           <h2 className="uppercase text-sm opacity-60">Allowed Departments</h2>
 
@@ -364,7 +422,6 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
         </div>
 
         {/* Years */}
-
         <div className="flex flex-col gap-4">
           <h2 className="uppercase text-sm opacity-60">Allowed Years</h2>
 
@@ -384,7 +441,6 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
         </div>
 
         {/* Divisions */}
-
         <div className="flex flex-col gap-4">
           <h2 className="uppercase text-sm opacity-60">Allowed Divisions</h2>
 
@@ -414,9 +470,9 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
                 onChange={(e) => {
                   const updated = [...editState.externalLinks];
                   updated[index] = { ...updated[index], name: e.target.value };
-                  setEditState({ ...editState, externalLinks: updated });
+                  setEditState((p) => ({ ...p, externalLinks: updated }));
                 }}
-                className="w-full md:flex-1 border-0 border-b bg-transparent outline-none"
+                className="cursor-target w-full md:flex-1 border-0 border-b-2 border-black bg-transparent outline-none"
               />
 
               <div className="flex items-center gap-3 w-full md:flex-[2]">
@@ -427,9 +483,9 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
                   onChange={(e) => {
                     const updated = [...editState.externalLinks];
                     updated[index] = { ...updated[index], link: e.target.value };
-                    setEditState({ ...editState, externalLinks: updated });
+                    setEditState((p) => ({ ...p, externalLinks: updated }));
                   }}
-                  className="flex-1 border-0 border-b bg-transparent outline-none"
+                  className="cursor-target flex-1 border-0 border-b-2 border-black bg-transparent outline-none"
                 />
 
                 <button
@@ -440,7 +496,7 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
                       externalLinks: editState.externalLinks.filter((_, i) => i !== index),
                     })
                   }
-                  className="opacity-60 hover:opacity-100 transition shrink-0"
+                  className="cursor-target opacity-60 hover:opacity-100 transition shrink-0"
                 >
                   <TrashIcon size={18} />
                 </button>
@@ -450,42 +506,63 @@ const UpdateEventDetails = ({ event }: { event: EventType }) => {
         </div>
 
         {/* Submit */}
-
-        <div className="flex justify-end pt-6">
+        <div className="flex gap-2 justify-end pt-6">
           <motion.button
             whileHover={{ x: 6 }}
             whileTap={{ scale: 0.97 }}
             disabled={disable}
             onClick={updateEvents}
-            className="border-b text-xl uppercase tracking-wide"
+            className="cursor-target border-b-2 border-black text-xl uppercase tracking-wide"
           >
             Update →
           </motion.button>
         </div>
 
-        <div className="mt-20 pt-8 border-t border-white/10">
+        <div className="mt-5 pt-2 border-t border-white/10">
           <h2 className="text-sm uppercase tracking-widest opacity-60 mb-8">Event Actions</h2>
 
           <div className="flex flex-wrap gap-x-10 gap-y-6">
-            <button onClick={downloadRegistrationList} className="border-b hover:opacity-70 transition">
+            <button
+              onClick={downloadRegistrationList}
+              className="cursor-target border-b-2 border-black hover:opacity-70 transition"
+            >
               Download Registration List
             </button>
 
-            <button onClick={downloadAttendanceList} className="border-b hover:opacity-70 transition">
+            <button
+              onClick={downloadAttendanceList}
+              className="cursor-target border-b-2 border-black hover:opacity-70 transition"
+            >
               Download Attendance List
             </button>
 
-            <Link href="attendance" className="border-b hover:opacity-70 transition">
+            <button
+              onClick={registrationToggle}
+              className="cursor-target border-b-2 border-black text-red-400 hover:opacity-70 transition"
+            >
+              {editState.canRegister ? "Close" : "Open"} Registration
+            </button>
+
+            <Link href="attendance" className="cursor-target border-b-2 border-black hover:opacity-70 ">
               Mark Attendance
             </Link>
 
-            <Link href="feedback" className="border-b hover:opacity-70 transition">
+            <Link
+              href={`feedback?link=${editState.feedbackLink}`}
+              className="cursor-target border-b-2 border-black hover:opacity-70 "
+            >
               Start Feedback
             </Link>
 
-            <button onClick={registrationToggle} className="border-b text-red-400 hover:opacity-70 transition">
-              {editState.canRegister ? "Close" : "Open"} Registration
-            </button>
+            <div className=" border-b-2">
+              <p className="text-sm text-base-content/60">Registered Students</p>
+              <p className="text-xl font-bold">{eventStat.registerdStudentsID}</p>
+            </div>
+
+            <div className=" border-b-2">
+              <p className="text-sm text-base-content/60">Attended Students</p>
+              <p className="text-xl font-bold">{eventStat.attendedStudentsID}</p>
+            </div>
           </div>
         </div>
       </motion.div>

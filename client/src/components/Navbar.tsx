@@ -87,7 +87,7 @@ const Navbar = () => {
         </div>
 
         {/* DESKTOP LOGIN */}
-        <Link href={isAuth ? "/profile" : "/login"} className="hidden md:flex flex-col cursor-pointer">
+        <Link href={isAuth ? "/profile" : `/login?redirect=${pathname}`} className="hidden md:flex flex-col cursor-pointer">
           <motion.span initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 1 }}>
             {isAuth ? "Profile" : "Login"}
           </motion.span>
@@ -143,7 +143,7 @@ const Navbar = () => {
                 className="mt-4 text-[2.25rem] font-semibold tracking-tight text-blue-700 cursor-pointer transition hover:translate-x-1 border-0 border-b border-blue-300"
                 onClick={() => {
                   setOpen(false);
-                  router.push(isAuth ? "/profile" : "/login");
+                  router.push(isAuth ? "/profile" : `/login?redirect=${pathname}`);
                 }}
               >
                 {isAuth ? "Profile" : "Login"}

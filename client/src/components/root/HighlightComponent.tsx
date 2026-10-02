@@ -1,16 +1,11 @@
 "use client";
 
-import { Zalando_Sans_Expanded } from "next/font/google";
 import { useState } from "react";
-import { HighlightType } from "./Highlights";
+import { HighlightType } from "./HighlightSection";
 import LoadingPage from "@/app/loading";
 
 import { motion } from "framer-motion";
-
-const buda = Zalando_Sans_Expanded({
-  weight: "700",
-  subsets: ["latin"],
-});
+import { globalFont } from "@/lib/fonts";
 
 const HighlightComponent = ({ data }: { data: HighlightType[] }) => {
   const [activeHighlight, setActiveHighlight] = useState(data[0]);
@@ -21,7 +16,7 @@ const HighlightComponent = ({ data }: { data: HighlightType[] }) => {
 
   return (
     <section
-      className={`h-[85vh] w-screen flex flex-col md:flex-row justify-center items-center md:px-10 ${buda.className}`}
+      className={`h-[85vh] w-screen flex flex-col md:flex-row justify-center items-center md:px-10 ${globalFont.className}`}
     >
       <div className="h-full w-full md:w-[60%] flex flex-row gap-2 justify-center items-start p-3">
         <div className="h-[90%] w-[40%] flex justify-center items-center ">
@@ -63,7 +58,7 @@ const HighlightComponent = ({ data }: { data: HighlightType[] }) => {
 
       <div className="h-full w-full md:w-[40%] flex flex-col">
         <h1
-          className={`${buda.className} h-[15%] md:h-[25%] w-full flex justify-center items-center text-[5vh] md:text-[10vh]`}
+          className={`${globalFont.className} h-[15%] md:h-[25%] w-full flex justify-center items-center text-[5vh] md:text-[10vh]`}
         >
           HIGHLIGHTS
         </h1>

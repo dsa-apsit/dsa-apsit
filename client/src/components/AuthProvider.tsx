@@ -28,9 +28,9 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
-      if (error.response.data.message === "unauthorized no token provided" && pathname === "/profile") {
-        toasty("login into your accoun to see profile");
-        router.push("/login?redirect=/profile");
+      if (error.response.data.message === "unauthorized no token provided" && pathname.includes("profile")) {
+        toasty("login into your account to see profile");
+        router.push(`/login?redirect=${pathname === "/login" ? "/profile" : pathname}`);
       }
       setAuth(false);
     }

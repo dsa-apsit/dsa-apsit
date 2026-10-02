@@ -12,6 +12,9 @@ const ImageToUrlTool = () => {
   const [preview, setPreview] = useState("");
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
+  const [path, setPath] = useState<string>("misc");
+
+  const allowedPaths = ["teams", "highlights", "events", "misc", "achievements"];
 
   const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -33,6 +36,7 @@ const ImageToUrlTool = () => {
 
       const formData = new FormData();
       formData.append("image", image);
+      formData.append("path", path);
 
       const { data } = await axiosInstance.post("/image-to-url", formData);
 
@@ -62,7 +66,7 @@ const ImageToUrlTool = () => {
 
       <div className="flex flex-col md:flex-row gap-8 items-start">
         {/* Preview */}
-        <div className="w-full md:w-64 h-64 border overflow-hidden flex items-center justify-center shrink-0">
+        <div className="cursor-target w-full md:w-64 h-64 border overflow-hidden flex items-center justify-center shrink-0">
           {preview ? (
             <img src={preview} alt="Preview" className="w-full h-full object-cover" />
           ) : (
@@ -76,13 +80,23 @@ const ImageToUrlTool = () => {
             type="file"
             accept="image/*"
             onChange={handleImage}
-            className="border p-2 text-sm file:mr-4 file:border-0 file:bg-transparent file:font-medium"
+            className="cursor-target border p-2 text-sm file:mr-4 file:border-0 file:bg-transparent file:font-medium"
           />
+          <div className="flex flex-col">
+            <label>Where Should This Image be Stored?</label>
+            <select value={path} onChange={(e)=> setPath(e.target.value)} name="path" id="path" className="border">
+              {allowedPaths.map((paths, index) => (
+                <option  key={paths} value={paths} className="cursor-target bg-black">
+                  {paths}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <button
             onClick={handleUpload}
             disabled={loading || !image}
-            className="border px-5 py-2 w-fit hover:bg-white/5 transition disabled:opacity-50"
+            className="cursor-target px-8 py-2  bg-white text-black border text-sm rounded-md font-semibold"
           >
             {loading ? "Uploading..." : "Upload Image"}
           </button>
@@ -104,7 +118,7 @@ const ImageToUrlTool = () => {
               toasty("Copied");
             }}
             disabled={!url}
-            className="border px-5 py-2 w-fit hover:bg-white/5 transition disabled:opacity-50"
+            className="cursor-target px-8 py-2  bg-white border text-black text-sm rounded-md font-semibold"
           >
             Copy URL
           </button>

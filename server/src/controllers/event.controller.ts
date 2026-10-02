@@ -1,5 +1,4 @@
-import { User } from "../models/user.model";
-import { Organization } from "../models/organization.model";
+import { User, type UserDocument } from "../models/user.model";
 import { Event } from "../models/events.model";
 
 import asyncHandler from "../utils/asyncHandler";
@@ -13,41 +12,44 @@ import type { Request, Response } from "express";
 import {
   addAttendedStudentSchema,
   getListSchema,
+  getMarkedAttendanceDataSchema,
   hostEventSchema,
   registerStudentSchema,
   updateEventSchema,
 } from "./event.schema";
 
-import { BAD_REQUEST, CREATED, INTERNAL_SERVER_ERROR, NOT_FOUND, OK, UNAUTHORIZED } from "../constants/status-codes";
+import {
+  BAD_REQUEST,
+  CONFLICT,
+  CREATED,
+  INTERNAL_SERVER_ERROR,
+  NOT_FOUND,
+  OK,
+  UNAUTHORIZED,
+} from "../constants/status-codes";
 
-import type { ObjectId } from "mongoose";
 
-import { Parser } from "json2csv";
-import logger from "../utils/logger";
-import { isUserInOrganization } from "../utils/isOrganizor";
-import { FeedBack } from "../models/feedback.model";
+import ExcelJS from "exceljs";
+import { isAdmin, isOrganizor } from "../utils/roles";
+import { Register } from "../models/registration.mode";
+import { Attendance } from "../models/attendance.model";
+
+const getLatestEvent = asyncHandler(async (req: Request, res: Response) => {
+  // pagination logic
+  const event = await Event.findOne().sort({ createdAt: -1 }).select("-attendedStudentsID -registerdStudentsID");
+
+  if (!event) throw new ApiError(NOT_FOUND, "latest event not found");
+
+  res.status(OK).json({ event, message: "events fetched successfully", success: true });
+});
 
 // get all events
 const getAllEvents = asyncHandler(async (req: Request, res: Response) => {
-  // pagination logic
-  const { skip } = req.query;
-  const skipNum = Number(skip) || 0;
-  const limitNum = 8;
-
   const events = await Event.find({ isPublic: true })
-    .populate({
-      path: "organizationID",
-      select: "name",
-    })
-    .sort({ createdAt: -1 })
-    .skip(skipNum)
-    .limit(limitNum);
+    .select("-markedStudents -registeredStudents")
+    .sort({ createdAt: -1 });
 
-  const total = await Event.countDocuments({ isPublic: true });
-
-  const hasMore = skipNum + limitNum < total;
-
-  res.status(OK).json({ events, message: "events fetched successfully", hasMore, success: true });
+  res.status(OK).json({ events, message: "events fetched successfully", success: true });
 });
 
 // get one event  by slug
@@ -55,13 +57,8 @@ const getEventBySlug = asyncHandler(async (req: Request, res: Response) => {
   const { slug } = req.params;
   if (!slug) throw new ApiError(BAD_REQUEST, "event slug not provided");
 
-  console.log({slug})
-
-  const event = await Event.findOne({ slug }).populate({
-    path: "organizationID",
-    select: "name slug",
-  });
-  if (!event) throw new ApiError(BAD_REQUEST, "invalid event id provided, failed to fetch event");
+  const event = await Event.findOne({ slug }).select("-attendedStudentsID -studentFeedbacks");
+  if (!event) throw new ApiError(NOT_FOUND, "invalid event id provided, failed to fetch event");
 
   // TODO - hide event for users but show for organizor so make this a private route
   res.status(OK).json({ event, message: "events fetched successfully", success: true });
@@ -70,23 +67,7 @@ const getEventBySlug = asyncHandler(async (req: Request, res: Response) => {
 // organizors can host an event
 const hostEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   //validate the payload by zod
-  const {
-    organizationID,
-
-    title,
-    banner,
-    date,
-    venue,
-    time,
-    description,
-    tags,
-    externalLinks,
-    speakers,
-
-    allowedDepartments,
-    allowedDivisions,
-    allowedYears,
-  } = hostEventSchema.parse(req.body);
+  const data = hostEventSchema.parse(req.body);
 
   // get the authenticated user payload
   if (!req.user || !req.user.userID) throw new ApiError(UNAUTHORIZED, "unauthorized to perform this action");
@@ -96,40 +77,13 @@ const hostEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response) 
   // check if user is has the organizor role
   const user = await User.findById(userID);
   if (!user) throw new ApiError(NOT_FOUND, "invalid token provided, failed to fetch user");
-  if (user.role === "USER")
-    throw new ApiError(UNAUTHORIZED, "unauthorised action, you are not allowed to perfom this action");
 
-  // check is user is part of the organization using slug
-  const organization = await Organization.findById(organizationID);
-  if (!organization) throw new ApiError(NOT_FOUND, "invalid id provided to find the organization");
+  if (!isAdmin(user.role)) throw new ApiError(UNAUTHORIZED, "unauthorized to perform this action");
 
-  if (!organization.members.includes(user._id))
-    throw new ApiError(UNAUTHORIZED, "access denies, not a member of organizations");
-
-  const slug = `${title}`.trim().toLowerCase().replace(/\s+/g, "-");
+  const slug = `${data.title}`.trim().toLowerCase().replace(/\s+/g, "-");
 
   // create an event
-  const event = await Event.create({
-    organizationID: organization._id,
-    title,
-    banner,
-    date,
-    venue,
-    time,
-    description,
-    tags,
-    externalLinks,
-    speakers,
-    slug,
-    allowedDepartments,
-    allowedYears,
-    allowedDivisions,
-  });
-
-  // add event to organizations events list
-  await Organization.findByIdAndUpdate(organization._id, {
-    $addToSet: { events: event._id },
-  });
+  const event = await Event.create({...data, slug});
 
   // send a response
   res.status(CREATED).json({ event, message: "event hosted successfully", succee: true });
@@ -152,23 +106,9 @@ const updateEventInformation = asyncHandler(async (req: AuthenticatedRequest, re
   // check if user is has the organizor role
   const user = await User.findById(userID);
   if (!user) throw new ApiError(NOT_FOUND, "invalid token provided, failed to fetch user");
-  if (user.role === "USER")
-    throw new ApiError(UNAUTHORIZED, "unauthorised action, you are not allowed to perfom this action");
-
-  // check if user is in the  organization who hosted the event
-  const eventData = await Event.findById(eventID);
-  if (!eventData) throw new ApiError(404, "event not found");
-
-  const isAuthorizedToGetDetails = isUserInOrganization(user, eventData.organizationID);
-
-  if (!isAuthorizedToGetDetails) {
-    throw new ApiError(403, "you are not allowed to request this event detail");
-  }
+  if (!isAdmin(user.role)) throw new ApiError(UNAUTHORIZED, "unauthorized to perform this action");
 
   if (toUpdateData.title) {
-    const organization = await Organization.findById(eventData.organizationID);
-    if (!organization) throw new ApiError(NOT_FOUND, "organization not found");
-
     toUpdateData.slug = `${toUpdateData.title}`.trim().toLowerCase().replace(/\s+/g, "-");
   }
 
@@ -182,8 +122,8 @@ const updateEventInformation = asyncHandler(async (req: AuthenticatedRequest, re
 // organizors can delete a hosted event
 const deleteEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   // get the event id from params
-  const { eventID } = req.params;
-  if (!eventID) throw new ApiError(BAD_REQUEST, "event id was not provided");
+  const { slug } = req.params;
+  if (!slug) throw new ApiError(BAD_REQUEST, "event id was not provided");
 
   // get the authenticated user payload
   if (!req.user || !req.user.userID) throw new ApiError(UNAUTHORIZED, "unauthorized to perform this action");
@@ -193,36 +133,28 @@ const deleteEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response
   // check if user is has the organizor role
   const user = await User.findById(userID);
   if (!user) throw new ApiError(NOT_FOUND, "invalid token provided, failed to fetch user");
-  if (user.role === "USER")
-    throw new ApiError(UNAUTHORIZED, "unauthorised action, you are not allowed to perfom this action");
+  if (!isAdmin(user.role)) throw new ApiError(UNAUTHORIZED, "unauthorized to perform this action");
 
-  // check if such event exist
-  const event = await Event.findById(eventID);
+  // check if such event exist - masc client is passing slug here so im not changing the var names but fetch event by slug here
+  const event = await Event.findOne({ slug });
   if (!event) throw new ApiError(NOT_FOUND, "event not found");
 
-  // check is user is part of the organization using slug
-  const isOrganizer = isUserInOrganization(user, event.organizationID);
-  if (!isOrganizer) throw new ApiError(UNAUTHORIZED, "unauthorised action, you are not in this org");
-
-  // delete the event
-  await Event.findOneAndDelete({ _id: eventID });
-
-  // delete all the feedback docs
-  await FeedBack.deleteMany({ eventID });
+  // delete the event - delete using the slug
+  await Event.findOneAndDelete({ slug });
 
   // send a response
-  res.status(CREATED).json({ event, message: "event updated successfully", succee: true });
+  res.status(CREATED).json({ event, message: "event deleted successfully", succee: true });
 });
 
 //users to register for an hoster event
 const registerForEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   // validate the body by zod
-  const { eventID, moodleID } = registerStudentSchema.parse(req.body);
+  const { eventID } = registerStudentSchema.parse(req.body);
 
   // get the authenticated user payload
-  if (!req.user || !req.user.userID) throw new ApiError(UNAUTHORIZED, "unauthorized to perform this action");
+  if (!req.user || !req.user.userID) throw new ApiError(UNAUTHORIZED, "login to perform this action");
   const { userID } = req.user;
-  if (!userID) throw new ApiError(UNAUTHORIZED, "Bad request, userID is missing");
+  if (!userID) throw new ApiError(UNAUTHORIZED, "bad request, userID is missing");
 
   // get user data
   const user = await User.findById(userID);
@@ -240,12 +172,16 @@ const registerForEvent = asyncHandler(async (req: AuthenticatedRequest, res: Res
 
   if (!canRegister) throw new ApiError(NOT_FOUND, "not eligible to register");
 
+  //check if user has already registered for the event
+  const alreadyRegistered = await Register.findOne({ studentID: user._id, eventID });
+  if (alreadyRegistered) throw new ApiError(CONFLICT, "user has already registered");
+
   // add users moodleID to event document
   const event = await Event.findOneAndUpdate(
     { _id: eventID, canRegister: true },
     {
       $addToSet: {
-        registerdStudentsID: moodleID,
+        registerdStudentsID: user._id,
       },
     },
     { new: true },
@@ -261,8 +197,11 @@ const registerForEvent = asyncHandler(async (req: AuthenticatedRequest, res: Res
     },
   );
 
+  // make a registration document
+  await Register.create({ studentID: userID, eventID: event._id });
+
   // send response
-  res.status(OK).json({ message: "registered successfully", success: true });
+  res.status(OK).json({ event, message: "registered successfully", success: true });
 });
 
 // organizors can add attended student list
@@ -285,23 +224,25 @@ const markAttendanceForEvent = asyncHandler(async (req: AuthenticatedRequest, re
   const eventData = await Event.findById(eventID);
   if (!eventData) throw new ApiError(404, "event not found");
 
-  const isAuthorizedToUpdateEvent = user.organizationID.some(
-    (orgId: ObjectId) => orgId.toString() === eventData.organizationID.toString(),
-  );
+  // fetch the userID of student using moodleID
+  const student = await User.findOne({ moodleID });
+  if (!student) throw new ApiError(NOT_FOUND, "failed to find an accounr using the provided moodleID");
 
-  if (!isAuthorizedToUpdateEvent) {
-    throw new ApiError(403, "you are not allowed to edit this event");
-  }
+  if (!isOrganizor(user.role)) throw new ApiError(UNAUTHORIZED, "unauthorized to perform this action");
+
+  // check if student attendance is already marked
+  const alreadyMarkedAttendance = await Attendance.findOne({ studentID: student._id, eventID: eventData._id });
+  if (alreadyMarkedAttendance) throw new ApiError(CONFLICT, `attendance is already marked for ${student.name}`);
 
   // update the attended student list
   const event = await Event.findOneAndUpdate(
     {
       _id: eventID,
-      registerdStudentsID: moodleID,
+      registerdStudentsID: student._id,
     },
     {
-      $set: {
-        [`attendedStudentsID.${moodleID}`]: new Date(),
+      $addToSet: {
+        attendedStudentsID: student._id,
       },
     },
     { new: true },
@@ -311,13 +252,39 @@ const markAttendanceForEvent = asyncHandler(async (req: AuthenticatedRequest, re
     throw new ApiError(403, "Student is not registered for this event");
   }
 
-  const allMoodleIDs = Array.from(event.attendedStudentsID.keys());
+  // make an attedance document for this event
+  const markAttendance = await Attendance.create({ studentID: student._id, eventID: event._id });
+
+  const markedStudentList = await Attendance.find({ eventID: event._id }).populate({
+    path: "studentID",
+    select: "name year divison department",
+  });
 
   // send response
-  res.status(OK).json({ allMoodleIDs, message: "attendance marked successfully", success: true });
+  res.status(OK).json({ markedStudentList, message: "attendance marked successfully", success: true });
 });
 
-const markAttendanceForEventBluck = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {});
+const getMarkedAttendanceData = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { eventID } = getMarkedAttendanceDataSchema.parse(req.params);
+
+  // get the autheticated users payload
+  if (!req.user || !req.user.userID) throw new ApiError(UNAUTHORIZED, "unauthorized to perform this action");
+  const { userID } = req.user;
+
+  // get the users data
+  const user = await User.findById(userID);
+  if (!user) throw new ApiError(NOT_FOUND, "invalid payload, failed to fetch user");
+
+  if (!isOrganizor(user.role)) throw new ApiError(UNAUTHORIZED, "unauthorized to perform this action");
+
+  const markedStudentList = await Attendance.find({ eventID }).populate({
+    path: "studentID",
+    select: "name year divison department",
+  });
+
+  // send response
+  res.status(OK).json({ markedStudentList, message: "attendance marked successfully", success: true });
+});
 
 // organizors can get the list of registerd student
 const getRegisteredStudents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
@@ -333,56 +300,83 @@ const getRegisteredStudents = asyncHandler(async (req: AuthenticatedRequest, res
   if (!user) throw new ApiError(NOT_FOUND, "invalid payload, failed to fetch user");
 
   // check is the user role is organizor
-  if (user.role === "USER") throw new ApiError(UNAUTHORIZED, "cant perform this action");
+  if (!isOrganizor(user.role)) throw new ApiError(UNAUTHORIZED, "unauthorized to perform this action");
 
   // check if user is in the  organization who hosted the event
   const eventData = await Event.findById(eventID);
   if (!eventData) throw new ApiError(404, "event not found");
 
-  const isAuthorizedToGetDetails = user.organizationID.some(
-    (orgId: ObjectId) => orgId.toString() === eventData.organizationID.toString(),
-  );
-
-  if (!isAuthorizedToGetDetails) {
-    throw new ApiError(403, "you are not allowed to request this event detail");
-  }
-
-  // fetch the list and populate it with {sr no, moodleID,name, department, year, division}
-  const registrationList = await User.find(
-    { registeredEvents: eventID },
-    {
-      moodleID: 1,
-      name: 1,
-      department: 1,
-      year: 1,
-      division: 1,
-      _id: 0,
-    },
-  );
-
-  // format data with serial number for csv
-  const formattedData = registrationList.map((user, index) => ({
-    sr_no: index + 1,
-    moodleID: user.moodleID,
-    name: user.name,
-    department: user.department,
-    year: user.year,
-    division: user.division,
-  }));
-
-  // parse json into csv using json2csv package
-  const parser = new Parser({
-    fields: ["sr_no", "moodleID", "name", "department", "year", "division"],
+  // fetch the list
+  const registrationList = await Register.find({ eventID }).populate<{ studentID: UserDocument }>({
+    path: "studentID",
+    select: "moodleID name department year division createdAt",
   });
 
-  const csv = parser.parse(formattedData);
+  if (!registrationList) throw new ApiError(INTERNAL_SERVER_ERROR, "failed to fetch registered students list");
 
-  //set headers in response object
-  res.setHeader("Content-Type", "text/csv");
-  res.setHeader("Content-Disposition", "attachment; filename=registration-list.csv");
+  // options to convert iso date into human readable date
+  const optionsDate: Intl.DateTimeFormatOptions = {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    timeZone: "Asia/Kolkata",
+  };
+
+  const optionsTime: Intl.DateTimeFormatOptions = {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "Asia/Kolkata",
+  };
+
+  // format data with serial number
+  const formattedData = registrationList.map(
+    ({ studentID: { moodleID, name, department, year, division }, createdAt }, index) => ({
+      sr_no: index + 1,
+      moodleID,
+      name,
+      department,
+      year,
+      division,
+      date: createdAt.toLocaleDateString("en-IN", optionsDate),
+      time: createdAt.toLocaleDateString("en-IN", optionsTime).trim().split(",")[1],
+    }),
+  );
+
+  // create Excel workbook
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Registrations");
+
+  // define columns
+  worksheet.columns = [
+    { header: "Sr No", key: "sr_no", width: 10 },
+    { header: "Moodle ID", key: "moodleID", width: 20 },
+    { header: "Name", key: "name", width: 25 },
+    { header: "Department", key: "department", width: 20 },
+    { header: "Year", key: "year", width: 10 },
+    { header: "Division", key: "division", width: 12 },
+    { header: "Date", key: "date", width: 15 },
+    { header: "Time", key: "time", width: 15 },
+  ];
+
+  // add data
+  worksheet.addRows(formattedData);
+
+  // optional: make header bold
+  worksheet.getRow(1).font = { bold: true };
+
+  // generate xlsx
+  const buffer = await workbook.xlsx.writeBuffer();
+
+  // set response headers
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", "attachment; filename=registration-list.xlsx");
+
+  // send file
+  res.send(buffer);
 
   // final response
-  res.status(OK).end(csv);
+  res.status(OK);
 });
 
 // organizors can get the list of attended students
@@ -405,29 +399,13 @@ const getAttendedStudents = asyncHandler(async (req: AuthenticatedRequest, res: 
   const eventData = await Event.findById(eventID);
   if (!eventData) throw new ApiError(404, "event not found");
 
-  const isAuthorizedToGetDetails = user.organizationID.some(
-    (orgId: ObjectId) => orgId.toString() === eventData.organizationID.toString(),
-  );
+  if (!isOrganizor(user.role)) throw new ApiError(UNAUTHORIZED, "unauthorized to perform this action");
 
-  if (!isAuthorizedToGetDetails) {
-    throw new ApiError(403, "you are not allowed to request this event detail");
-  }
-
-  // get all the moodle ID's
-  const allMoodleIDs = Array.from(eventData.attendedStudentsID.keys());
-
-  // fetch the list and populate it with {sr no, moodleID,name, department, year, division}
-  const attendedStudentList = await User.find(
-    { moodleID: { $in: allMoodleIDs } },
-    {
-      moodleID: 1,
-      name: 1,
-      department: 1,
-      year: 1,
-      division: 1,
-      _id: 0,
-    },
-  );
+  // fetch the list and populate it
+  const attendanceList = await Attendance.find({ eventID }).populate<{ studentID: UserDocument }>({
+    path: "studentID",
+    select: "moodleID name department year division createdAt",
+  });
 
   // options to convert iso date into human readable date
   const optionsDate: Intl.DateTimeFormatOptions = {
@@ -444,41 +422,95 @@ const getAttendedStudents = asyncHandler(async (req: AuthenticatedRequest, res: 
     timeZone: "Asia/Kolkata",
   };
 
-  // format data with serial number for csv
-  const formattedData = attendedStudentList.map((user, index) => ({
-    sr_no: index + 1,
-    moodleID: user.moodleID,
-    name: user.name,
-    department: user.department,
-    year: user.year,
-    division: user.division,
-    date: eventData?.attendedStudentsID.get(user.moodleID)?.toLocaleDateString("en-IN", optionsDate) ?? null,
-    time: eventData?.attendedStudentsID.get(user.moodleID)?.toLocaleTimeString("en-IN", optionsTime) ?? null,
-  }));
+  // format data with serial number
+  const formattedData = attendanceList.map(
+    ({ studentID: { moodleID, name, department, year, division }, createdAt }, index) => ({
+      sr_no: index + 1,
+      moodleID,
+      name,
+      department,
+      year,
+      division,
+      date: createdAt.toLocaleDateString("en-IN", optionsDate),
+      time: createdAt.toLocaleDateString("en-IN", optionsTime).trim().split(",")[1],
+    }),
+  );
 
-  // parse json into csv using json2csv package
-  const parser = new Parser({
-    fields: ["sr_no", "moodleID", "name", "department", "year", "division", "date", "time"],
-  });
+  // Create Excel workbook
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Attendance");
 
-  const csv = parser.parse(formattedData);
+  // Define columns
+  worksheet.columns = [
+    { header: "Sr No", key: "sr_no", width: 10 },
+    { header: "Moodle ID", key: "moodleID", width: 20 },
+    { header: "Name", key: "name", width: 25 },
+    { header: "Department", key: "department", width: 20 },
+    { header: "Year", key: "year", width: 10 },
+    { header: "Division", key: "division", width: 12 },
+    { header: "Date", key: "date", width: 15 },
+    { header: "Time", key: "time", width: 15 },
+  ];
 
-  //set headers in response object
-  res.setHeader("Content-Type", "text/csv");
-  res.setHeader("Content-Disposition", "attachment; filename=attendance-list.csv");
+  // Add rows
+  worksheet.addRows(formattedData);
 
-  // final response
-  res.status(OK).end(csv);
+  // Bold headers
+  worksheet.getRow(1).font = { bold: true };
+
+  // Generate XLSX
+  const buffer = await workbook.xlsx.writeBuffer();
+
+  // Set response headers
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", "attachment; filename=attendance-list.xlsx");
+
+  // Send file
+  res.status(OK).send(buffer);
+});
+
+const getEventStats = asyncHandler(async (req: Request, res: Response) => {
+  const { slug } = req.params;
+  if (!slug) throw new ApiError(BAD_REQUEST, "event slug not provided");
+
+  const event = await Event.findOne({ slug, isPublic: true })
+    .select({
+      registerdStudentsID: 1,
+      attendedStudentsID: 1,
+    })
+    .lean();
+
+  if (!event) {
+    return null;
+  }
+
+  const result = {
+    regCount: event.registerdStudentsID?.length ?? 0,
+    markCount: event.attendedStudentsID?.length ?? 0,
+  };
+
+  if (!event) throw new ApiError(BAD_REQUEST, "invalid event id provided, failed to fetch event");
+
+  // TODO - hide event for users but show for organizor so make this a private route
+  res.status(OK).json({ event, message: "events fetched successfully", success: true });
 });
 
 export {
+  // admin controllers
   hostEvent,
   updateEventInformation,
-  registerForEvent,
+  deleteEvent,
+
+  // organizor controllers
   markAttendanceForEvent,
   getRegisteredStudents,
   getAttendedStudents,
+  getMarkedAttendanceData,
+
+  // user controllers
   getAllEvents,
   getEventBySlug,
-  deleteEvent,
+  getLatestEvent,
+  getEventStats,
+  registerForEvent,
 };

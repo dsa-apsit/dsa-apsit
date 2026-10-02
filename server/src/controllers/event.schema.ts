@@ -5,6 +5,7 @@ const hostEventSchema = z.object({
   title: z.string().min(2),
   banner: z.string().min(1),
   date: z.string().min(2),
+  feedbackLink : z.string().url(),
 
   time: z.string().min(1),
   venue: z.string().min(1),
@@ -12,9 +13,6 @@ const hostEventSchema = z.object({
   description: z.string().min(1),
   tags: z.array(z.string().min(1)).min(1).max(5),
   externalLinks: z.array(z.object({ name: z.string().min(1), link: z.string().url() })).max(5),
-
-  // org info
-  organizationID: z.string().min(1).max(25),
 
   //filters
   allowedYears: z.array(z.string().min(1)).optional(),
@@ -28,6 +26,7 @@ const updateEventSchema = z.object({
   slug: z.string().min(2).optional(),
   banner: z.string().min(1).optional(),
   date: z.string().min(2).optional(),
+  feedbackLink : z.string().url().optional(),
 
   time: z.string().min(1).optional(),
   venue: z.string().min(1).optional(),
@@ -38,9 +37,6 @@ const updateEventSchema = z.object({
     .array(z.object({ name: z.string().min(1), link: z.string().url() }))
     .max(5)
     .optional(),
-
-  // org info
-  organizationID: z.string().min(1).max(25),
 
   //bools to hide/show certain action for the user
   canRegister: z.boolean().optional(),
@@ -67,4 +63,15 @@ const getListSchema = z.object({
   eventID: z.string(),
 });
 
-export { hostEventSchema, updateEventSchema, registerStudentSchema, addAttendedStudentSchema, getListSchema };
+const getMarkedAttendanceDataSchema = z.object({
+  eventID: z.string(),
+});
+
+export {
+  hostEventSchema,
+  updateEventSchema,
+  registerStudentSchema,
+  addAttendedStudentSchema,
+  getListSchema,
+  getMarkedAttendanceDataSchema,
+};

@@ -11,6 +11,8 @@ import Cookie from "js-cookie";
 import { toasty } from "@/components/ToastProvider";
 
 import { usePathname, useRouter } from "next/navigation";
+import { useLoadingStore } from "@/store/loading";
+import Link from "next/link";
 
 const RegisterPage = () => {
   const [registerData, setRegisterData] = useState<{
@@ -34,6 +36,7 @@ const RegisterPage = () => {
   const years = ["FE", "SE", "TE", "BE"];
 
   const router = useRouter();
+  const { loading, setLoading } = useLoadingStore();
 
   const fieldVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
@@ -50,6 +53,7 @@ const RegisterPage = () => {
 
   const handleRegister = async () => {
     try {
+      setLoading(true);
       const { moodleID, password, name, department, division, year } = registerData;
 
       if (!moodleID || !password || !name || !department || !division || !year)
@@ -61,19 +65,20 @@ const RegisterPage = () => {
 
       router.push("/profile");
     } catch (error: any) {
-      console.log(error.message || error);
       if (error.message.response.data.errors.length > 0) {
-        return error.response.data.errors.map((err: { path: string; message: string }) => toasty(err.message));
+        return error.response.data.errors.map((err: { path: string; message: string }) =>
+          toasty(`${err.path}, ${err.message}`),
+        );
       }
 
-      toasty(error.response.data.message);
+      toasty("Failed To Register User");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center px-6">
-      <div className="absolute inset-0 -z-10 bg-[#131F43] [mask-image:linear-gradient(to_bottom,white,transparent)]" />
-
+    <section className=" min-h-screen flex items-center justify-center px-6  [mask-image:linear-gradient(to_bottom,white)] bg-[#131F43] text-white">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -82,8 +87,8 @@ const RegisterPage = () => {
       >
         {/* Heading */}
         <div>
-          <h1 className="text-4xl font-bold uppercase">Register with dsa</h1>
-          <p className="text-sm opacity-60 mt-2">Enter your academic details to continue.</p>
+          <h1 className="text-2xl md:text-4xl font-bold uppercase">Register at masc</h1>
+          <p className="text-xs md:text-sm opacity-60 mt-2">Enter your academic details to continue.</p>
         </div>
 
         {/* Basic */}
@@ -93,12 +98,12 @@ const RegisterPage = () => {
             variants={fieldVariants}
             initial="hidden"
             animate="visible"
-            className="flex items-center gap-4"
+            className="flex items-center gap-4 cursor-target"
           >
             <IdCard className="shrink-0" />
 
             <input
-              className="flex-1 border-0 border-b bg-transparent outline-none uppercase text-lg"
+              className="flex-1 border-0 border-b-2 border-white bg-transparent outline-none uppercase text-lg"
               placeholder="Moodle ID"
               value={registerData.moodleID}
               onChange={(e) =>
@@ -115,12 +120,12 @@ const RegisterPage = () => {
             variants={fieldVariants}
             initial="hidden"
             animate="visible"
-            className="flex items-center gap-4"
+            className="flex items-center gap-4 cursor-target"
           >
             <User2 className="shrink-0" />
 
             <input
-              className="flex-1 border-0 border-b bg-transparent outline-none uppercase text-lg"
+              className="flex-1 border-0 border-b-2 border-white bg-transparent outline-none uppercase text-lg"
               placeholder="Full Name"
               value={registerData.name}
               onChange={(e) =>
@@ -142,7 +147,7 @@ const RegisterPage = () => {
           className="flex flex-wrap gap-6"
         >
           <select
-            className="flex-1 min-w-[180px] border-0 border-b bg-transparent outline-none uppercase text-lg"
+            className="flex-1 min-w-[180px] border-0 border-b-2 border-white bg-transparent outline-none uppercase text-lg"
             value={registerData.department}
             onChange={(e) =>
               setRegisterData((p) => ({
@@ -163,7 +168,7 @@ const RegisterPage = () => {
           </select>
 
           <select
-            className="flex-1 min-w-[120px] border-0 border-b bg-transparent outline-none uppercase text-lg"
+            className="flex-1 min-w-[120px] border-0 border-b-2 border-white bg-transparent outline-none uppercase text-lg"
             value={registerData.division}
             onChange={(e) =>
               setRegisterData((p) => ({
@@ -184,7 +189,7 @@ const RegisterPage = () => {
           </select>
 
           <select
-            className="flex-1 min-w-[120px] border-0 border-b bg-transparent outline-none uppercase text-lg"
+            className="flex-1 min-w-[120px] border-0 border-b-2 border-white bg-transparent outline-none uppercase text-lg"
             value={registerData.year}
             onChange={(e) =>
               setRegisterData((p) => ({
@@ -211,12 +216,12 @@ const RegisterPage = () => {
           variants={fieldVariants}
           initial="hidden"
           animate="visible"
-          className="flex items-center gap-4"
+          className="flex items-center gap-4 cursor-target "
         >
           <Lock className="shrink-0" />
 
           <input
-            className="flex-1 border-0 border-b bg-transparent outline-none text-lg"
+            className="flex-1 border-0 border-b-2 border-white bg-transparent outline-none text-lg"
             placeholder="Password"
             type="password"
             value={registerData.password}
@@ -235,12 +240,18 @@ const RegisterPage = () => {
             whileHover={{ x: 6 }}
             whileTap={{ scale: 0.96 }}
             transition={{ type: "spring", stiffness: 300 }}
-            className="border-b text-lg uppercase tracking-wide cursor-pointer"
+            className={`border-b-2 border-white text-lg uppercase tracking-wide cursor-target ${loading ? "text-gray-400" : "text-white"}`}
             onClick={handleRegister}
           >
             Submit Details
           </motion.button>
         </motion.div>
+        <Link
+          href={"/login"}
+          className="underline capitalize underline-offset-4 text-gray-400 cursor-target"
+        >
+          Already have an account?
+        </Link>
       </motion.div>
     </section>
   );

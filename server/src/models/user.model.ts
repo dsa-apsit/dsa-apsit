@@ -11,7 +11,6 @@ export interface UserDocument extends mongoose.Document {
   division: string;
   department: string;
   role: string;
-  organizationID: ObjectId[];
   registeredEvents: ObjectId[];
   comparePassword(value: string): Promise<boolean>;
 }
@@ -55,12 +54,6 @@ const userSchema = new Schema<UserDocument>(
       enum: ["USER", "ORGANIZOR", "ADMIN"],
       default: "USER",
     },
-    organizationID: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "Organization",
-      },
-    ],
     registeredEvents: [
       {
         type: Schema.Types.ObjectId,
@@ -80,17 +73,6 @@ userSchema.pre("save", async function (next) {
   }
 });
 
-// WILL FIX THIS LATER
-
-// userSchema.pre("findOneAndUpdate", async function (next) {
-//   const update = this.getUpdate();
-
-//   if (update.password) {
-//     update.password = await hashPassword(update.password);
-//   }
-
-//   next();
-// });
 
 userSchema.methods.comparePassword = async function (pass: string) {
   return await comparePassword(pass, this.password);

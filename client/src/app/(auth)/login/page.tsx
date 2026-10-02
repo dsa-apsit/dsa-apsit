@@ -14,15 +14,21 @@ import { useRouter } from "next/navigation";
 
 import { useUserStore } from "@/store/user";
 
+import { useSearchParams } from "next/navigation";
+import { useLoadingStore } from "@/store/loading";
+
 const LoginPage = () => {
   const [loginData, setLoginData] = useState<{ moodleID: string; password: string }>({
     moodleID: "",
     password: "",
   });
 
-  const { setUser } = useUserStore();
+  const { loading, setLoading } = useLoadingStore();
+
+  const { setUser, setAuth } = useUserStore();
 
   const router = useRouter();
+  const redirectTo = useSearchParams().get("redirect");
 
   const fieldVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
@@ -39,6 +45,7 @@ const LoginPage = () => {
 
   const handleLogin = async () => {
     try {
+      setLoading(true);
       const { moodleID, password } = loginData;
 
       if (!moodleID || !password) return toasty("an incomplete form cant be submitted");
@@ -47,23 +54,29 @@ const LoginPage = () => {
 
       Cookie.set("jwt", data.token);
 
-      setUser(data.userExist)
+      setUser(data.userExist);
+      setAuth(true);
 
-      router.push("/profile");
-    } catch (error: any) {
-      console.log(error.message || error);
-      if (error.message.response.data.errors.length > 0) {
-        return error.response.data.errors.map((err: { path: string; message: string }) => toasty(err.message));
+      alert(redirectTo)
+
+      if (redirectTo) {
+        return redirectTo === "/" || redirectTo === "/login" ? router.push("/profile") : router.push(redirectTo);
       }
-
-      toasty(error.response.data.message);
+    } catch (error: any) {
+      toasty("Login Failed");
+      if (error.response.data.errors?.length > 0) {
+        return error.response.data.errors.map((err: { path: string; message: string }) =>
+          toasty(`${err.path}, ${err.message}`),
+        );
+      }
+      setAuth(false);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center px-6">
-      <div className="absolute inset-0 -z-10 bg-[#131F43] [mask-image:linear-gradient(to_bottom,white,transparent)]" />
-
+    <section className=" min-h-screen [mask-image:linear-gradient(to_bottom,white)] bg-[#131F43] flex items-center justify-center px-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -72,8 +85,8 @@ const LoginPage = () => {
       >
         {/* Heading */}
         <div>
-          <h1 className="text-4xl font-bold uppercase">Login At DSA</h1>
-          <p className="mt-2 text-sm opacity-60">Continue with your Moodle credentials.</p>
+          <h1 className="text-2xl md:text-4xl font-bold uppercase">Login At dsa</h1>
+          <p className="mt-2 text-xs md:text-sm opacity-60">Continue with your Moodle credentials.</p>
         </div>
 
         {/* Moodle ID */}
@@ -87,7 +100,7 @@ const LoginPage = () => {
           <User2 className="shrink-0" />
 
           <input
-            className="flex-1 border-0 border-b bg-transparent outline-none uppercase text-lg"
+            className="flex-1 border-0 border-b bg-transparent outline-none uppercase text-lg cursor-target"
             placeholder="Moodle ID"
             type="text"
             value={loginData.moodleID}
@@ -111,7 +124,7 @@ const LoginPage = () => {
           <Lock className="shrink-0" />
 
           <input
-            className="flex-1 border-0 border-b bg-transparent outline-none text-lg"
+            className="flex-1 border-0 border-b bg-transparent outline-none text-lg cursor-target"
             placeholder="Password"
             type="password"
             value={loginData.password}
@@ -127,15 +140,22 @@ const LoginPage = () => {
         {/* Button */}
         <motion.div custom={2} variants={fieldVariants} initial="hidden" animate="visible" className="flex justify-end">
           <motion.button
+            disabled={loading}
             whileHover={{ x: 6 }}
             whileTap={{ scale: 0.96 }}
             transition={{ type: "spring", stiffness: 300 }}
-            className="border-b text-lg uppercase tracking-wide cursor-pointer"
+            className={`border-b text-lg uppercase tracking-wide cursor-target ${loading ? "text-gray-400" : "text-white"}`}
             onClick={handleLogin}
           >
             Login
           </motion.button>
         </motion.div>
+        <span
+          className="underline underline-offset-4 text-gray-400 cursor-target"
+          onClick={() => toasty("No worries! Club Members can set new password for you")}
+        >
+          Forgot Password ?
+        </span>
       </motion.div>
     </section>
   );

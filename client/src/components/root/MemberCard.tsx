@@ -1,16 +1,11 @@
 "use client";
 
 import { MemberType } from "@/data/member";
+import { globalFont } from "@/lib/fonts";
 
 import { motion, AnimatePresence } from "framer-motion";
 
 import { useState } from "react";
-import { Zalando_Sans_Expanded } from "next/font/google";
-
-const buda = Zalando_Sans_Expanded({
-  weight: "200",
-  subsets: ["latin"],
-});
 
 const MemberStack = ({ memberArray, type }: { memberArray: MemberType[]; type: string }) => {
   const [stack, setStack] = useState(memberArray);
@@ -26,7 +21,7 @@ const MemberStack = ({ memberArray, type }: { memberArray: MemberType[]; type: s
     <div className="relative h-[93%] w-[55vw] md:w-[20vw] flex flex-col items-center justify-start pb-6">
       <AnimatePresence>
         {stack.map((member, i) => (
-          <MemberCard member={member} num={i} key={member.id} onClick={() => bringToFront(i)} />
+          <MemberCard key={member.id} member={member} num={i} onClick={() => bringToFront(i)} />
         ))}
       </AnimatePresence>
     </div>
@@ -35,9 +30,10 @@ const MemberStack = ({ memberArray, type }: { memberArray: MemberType[]; type: s
 
 export default MemberStack;
 
-const MemberCard = ({ member, num, onClick,  }: { member: MemberType; num: number; onClick: () => void }) => {
+const MemberCard = ({ member, num, onClick }: { member: MemberType; num: number; onClick: () => void }) => {
   return (
     <motion.div
+      key={`${member.name}`}
       layout
       onClick={onClick}
       className="absolute cursor-pointer"
@@ -61,10 +57,10 @@ const MemberCard = ({ member, num, onClick,  }: { member: MemberType; num: numbe
         <div className="relative border border-purple-300/35 py-1 px-2 md:h-[95%] h-[80%] w-[55vw] md:w-[16vw] rounded-xl bg-[#1F2225]">
           <div className="absolute z-10 h-full w-[95%] mt-5 flex flex-row justify-between items-start">
             <h1
-              className={`flex flex-col h-full justify-start items-center capitalize text-slate-100/70 text-xs md:text-md ${buda.className}`}
+              className={`flex flex-col h-full justify-start items-center capitalize text-slate-100/70 text-xs md:text-md ${globalFont.className}`}
             >
-              {member.role.split("").map((word, i) => (
-                <span className="">{word}</span>
+              {member.role.split("").map((char, i) => (
+                <span key={`${char}-${i}`}>{char}</span>
               ))}
             </h1>
           </div>
@@ -74,7 +70,7 @@ const MemberCard = ({ member, num, onClick,  }: { member: MemberType; num: numbe
           <div className="absolute z-30 h-full w-full flex flex-col justify-end items-end p-1 pr-3 md:pr-5 pb-2 md:pb-5  ">
             <div className="bg-black/20 backdrop-blur w-full px-2 py-1 rounded-lg md:rounded-xl">
               <h1 className="text-sm md:text-xl capitalize">{member.name}</h1>
-              <h2 className={`${buda.className} text-xs md:text-sm capitalize`}>{member.type} Team</h2>
+              <h2 className={`${globalFont.className} text-xs md:text-sm capitalize`}>{member.type} Team</h2>
             </div>
           </div>
         </div>

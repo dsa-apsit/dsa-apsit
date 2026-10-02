@@ -8,20 +8,22 @@ import { useUserStore } from "@/store/user";
 
 import { toasty } from "../ToastProvider";
 import axiosInstance from "@/services/axios";
+import { useLoadingStore } from "@/store/loading";
 
 const EventsDetails = ({ event }: { event: EventType }) => {
-  const [loading, setLoading] = useState(false);
-
   const { user, isAuth } = useUserStore();
 
+  const { loading, setLoading } = useLoadingStore();
+
   const handleRegister = async () => {
+    setLoading(true);
     try {
       if (!user || !isAuth) {
         throw Error("log in to register");
       }
 
       const { data } = await axiosInstance.post(
-        `/events/${event._id}/register`,
+        `/events/register`,
         { eventID: event._id, moodleID: user.moodleID },
         { withCredentials: true },
       );
@@ -29,11 +31,14 @@ const EventsDetails = ({ event }: { event: EventType }) => {
       toasty("registered successfully");
     } catch (error: any) {
       toasty(error.response?.data.message || error.message);
+    } finally {
+      setLoading(false);
     }
   };
+
   return (
     <div className="min-h-screen flex justify-center px-6 py-20">
-      <div className="absolute inset-0 -z-10 bg-[#131F43] [mask-image:linear-gradient(to_bottom,white,transparent)]" />
+      <div className="absolute inset-0 -z-10 text-black" />
 
       <section className="min-h-[80vh] w-[90vw]">
         <div className="flex flex-col lg:flex-row gap-10 items-start">
@@ -44,40 +49,50 @@ const EventsDetails = ({ event }: { event: EventType }) => {
           </div>
 
           {/* Right */}
-          <div className="lg:w-1/2 flex flex-col gap-8">
+          <div className="lg:w-[70%] flex flex-col gap-8">
             <div>
-              <h1 className="text-5xl font-bold uppercase">{event.title}</h1>
+              <h1 className="text-xl md:text-4xl font-bold uppercase">{event.title}</h1>
             </div>
 
-            <div className="flex flex-row gap-4">
+            <div className="flex flex-col md:flex-row gap-4">
               <div>
-                <span className="text-xs uppercase opacity-50">Date</span>
+                <span className="text-xs uppercase text-gray-600">Date</span>
                 <p>{event.date}</p>
               </div>
 
               <div>
-                <span className="text-xs uppercase opacity-50">Time</span>
+                <span className="text-xs uppercase text-gray-600">Time</span>
                 <p>{event.time}</p>
               </div>
 
               <div>
-                <span className="text-xs uppercase opacity-50">Venue</span>
+                <span className="text-xs uppercase text-gray-600">Venue</span>
                 <p>{event.venue}</p>
               </div>
             </div>
 
             <div>
-              <h2 className="uppercase text-sm opacity-60 mb-2">About</h2>
+              <h2 className="uppercase text-xs text-gray-600 mb-2">Speakers</h2>
+
+              {event.speakers.map((speaker, index) => (
+                <p key={`${speaker} ${index}`} className="leading-7 whitespace-pre-line">
+                  {index > event.speakers.length ? `${speaker},` : `${speaker}`}
+                </p>
+              ))}
+            </div>
+
+            <div>
+              <h2 className="uppercase text-xs text-gray-600 mb-2">About</h2>
 
               <p className="leading-7 whitespace-pre-line">{event.description}</p>
             </div>
 
             <div>
-              <h2 className="uppercase text-sm opacity-60 mb-2">Tags</h2>
+              <h2 className="uppercase text-sm text-gray-600 mb-2">Tags</h2>
 
               <div className="flex flex-wrap gap-2">
                 {event.tags.map((tag) => (
-                  <span key={tag} className="border px-3 py-1 text-sm uppercase">
+                  <span key={tag} className="bg-black text-white  px-3 py-1 text-sm uppercase">
                     {tag}
                   </span>
                 ))}
@@ -86,12 +101,16 @@ const EventsDetails = ({ event }: { event: EventType }) => {
 
             {event.externalLinks.length > 0 && (
               <div>
-                <h2 className="uppercase text-sm opacity-60 mb-2">Helpful Links</h2>
+                <h2 className="uppercase text-sm text-gray-600 mb-2">Helpful Links</h2>
 
                 <div className="flex flex-col gap-2">
                   {event.externalLinks.length > 0 &&
                     event.externalLinks.map((link) => (
-                      <Link key={link.link} href={link.link} className="flex items-center gap-2 border-b w-fit pb-1">
+                      <Link
+                        key={link.link}
+                        href={link.link}
+                        className="flex items-center cursor-target gap-2 border-b-2 border-black w-fit pb-1"
+                      >
                         <Link2 />
                         {link.name}
                       </Link>
@@ -102,26 +121,42 @@ const EventsDetails = ({ event }: { event: EventType }) => {
 
             <div className="flex justify-end pt-6">
               <button
+                disabled={loading}
                 onClick={handleRegister}
-                className="border-b text-xl uppercase tracking-wide hover:cursor-pointer"
+                className="border-b-2 border-black text-xl uppercase tracking-wide cursor-target"
               >
-                {user && event.registerdStudentsID.includes(user.moodleID) ? "Already registered" : "register"}
+                {user && event.registerdStudentsID.includes(user._id) ? "Already registered" : "register"}
               </button>
             </div>
-
           </div>
         </div>
-            {user?.role === "ORGANIZOR" && (
-              <div className="mt-20 w- pt-8 border-t border-white/10">
-                <h2 className="text-sm uppercase tracking-widest opacity-60 mb-8">Admin Actions</h2>
-
-                <div className="flex flex-wrap gap-x-10 gap-y-6">
-                  <Link href={`${event.slug}/update`} className="border-b hover:opacity-70 transition text-red-400">
-                    Update Event Details
-                  </Link>
-                </div>
+        {["ORGANIZOR", "ADMIN"].includes(user?.role || "") && (
+          <div className="mt-20 w- pt-8 border-t border-white/10">
+            <h2 className="text-sm uppercase tracking-widest textgray-600 mb-8">Admin Actions</h2>
+            <div className=" flex flex-col md:flex-row justify-start items-start gap-2 md:gap-x-5">
+              <div className="flex flex-wrap gap-x-10 gap-y-6">
+                <Link
+                  href={`/events/${event.slug}/update`}
+                  className="cursor-target border-b-2 border-black hover:opacity-70 transition text-red-400"
+                >
+                  Update Event Details
+                </Link>
               </div>
-            )}
+              <div className="flex flex-wrap gap-x-10 gap-y-6">
+                <Link
+                  onClick={() => {
+                    navigator.clipboard.writeText(event.slug);
+                    toasty("event slug has been copied");
+                  }}
+                  href={`/admin/events`}
+                  className="cursor-target border-b-2 border-black hover:opacity-70 transition text-red-400"
+                >
+                  Delete This Event
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

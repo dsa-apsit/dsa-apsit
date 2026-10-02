@@ -1,47 +1,53 @@
 "use client";
-import LenisProvider from "@/components/LenisProvider";
 import { toasty } from "@/components/ToastProvider";
-
-import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
 
 import axiosInstance from "@/services/axios";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { EventType } from "./create/page";
+import { EventType } from '@/app/events/create/page';
+import { useRouter } from "next/navigation";
+import LoadingPage from "../loading";
 
 const EventsPage = () => {
   const [eventData, setEventData] = useState<EventType[]>([]);
 
+  const router = useRouter();
+
   const fetchEvents = async () => {
     try {
-      const {data} = await axiosInstance.get("/events");
-      setEventData(data.events)
+      const { data } = await axiosInstance.get("/events");
+      setEventData(data.events);
     } catch (error: any) {
-      toasty(error.response.data.message || error.message);
+      toasty(error.message || "Failed t Fetch Events");
     }
   };
-  useEffect(()=>{
-    fetchEvents()
+  useEffect(() => {
+    fetchEvents();
   }, []);
 
+  if(!eventData || eventData.length <1){
+    return <LoadingPage/>
+  }
+
   return (
-    <LenisProvider>
-      <section className="relative min-h-screen">
-        <div className="absolute inset-0 -z-10 bg-[#131F43] [mask-image:linear-gradient(to_bottom,white,transparent)]" />
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 pt-12">
-          {eventData.map((event, i) => (
-            <div key={i} className="aspect-[3/4] border border-white/10 flex items-center justify-center flex-col">
-              <Link className="h-full w-full" href={`/events/${event.slug}`}>
-              <img src={event.banner} alt={`${event.title}`} className="h-full w-full object-cover" />
-              </Link>
-              <InteractiveHoverButton className="text-center w-full rounded-none bg-black">
-                Register
-              </InteractiveHoverButton>
-            </div>
-          ))}
-        </div>
-      </section>
-    </LenisProvider>
+    <section className=" min-h-screen mt-10 mb-2">
+
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 pt-12">
+        {eventData && eventData.map((event, i) => (
+          <div key={i} className="aspect-[3/4] border border-white/10 flex items-center justify-center flex-col">
+            <Link className="h-full w-full" href={`/events/${event.slug}`}>
+              <img src={event.banner} alt={`${event.title}`} className="h-full w-full object-cover cursor-target" />
+            </Link>
+            <button
+              onClick={() => router.push(`/events/${event.slug}`)}
+              className="text-center w-full rounded-none bg-black text-white pb-2 cursor-target"
+            >
+              Check Out
+            </button>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 };
 

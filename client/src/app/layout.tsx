@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Zalando_Sans_Expanded } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { SmoothCursor } from "@/components/ui/smooth-cursor";
 
 import { Toaster } from "react-hot-toast";
+import { globalFont } from "@/lib/fonts";
 import AuthProvider from "@/components/AuthProvider";
 
-const buda = Zalando_Sans_Expanded({
-  weight: "500",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "DSA | APSIT",
@@ -68,11 +64,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={` ${buda.className} antialiased overflow-x-hidden bg-black text-white relative`}>
+      <body className={` ${globalFont.className} antialiased overflow-x-hidden bg-black text-white relative`}>
         <SmoothCursor />
         <Navbar />
         <Toaster position="bottom-right" reverseOrder={false} />
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+
+        {children}
+        </AuthProvider>
         <Footer />
       </body>
     </html>

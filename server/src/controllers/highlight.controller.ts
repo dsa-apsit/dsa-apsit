@@ -4,9 +4,9 @@ import { createHighlightSchema, updateHighlightSchema } from "./achievement.sche
 
 import ApiError from "../utils/apiError";
 import type { AuthenticatedRequest } from "../middlewares/auth.middleware";
-import { Organization } from "../models/organization.model";
 import { NOT_FOUND, UNAUTHORIZED } from "../constants/status-codes";
 import { User } from "../models/user.model";
+import { isOrganizor } from "../utils/roles";
 
 export const getAllHighlights = async (_: Request, res: Response) => {
   const highlights = await Highlight.find().sort({ createdAt: -1 });
@@ -24,16 +24,12 @@ export const createHighlight = async (req: AuthenticatedRequest, res: Response) 
 
   if (!userID) throw new ApiError(UNAUTHORIZED, "Bad request, userID is missing");
 
-  // check if such organization exist or not
-  const organizationToUpdate = await Organization.findOne({ slug: "dsa" });
-  if (!organizationToUpdate) throw new ApiError(NOT_FOUND, "invalid slug provided, to find organization");
-
   // check if authenticated user is in the organization
   const user = await User.findById(userID);
   if (!user) throw new ApiError(NOT_FOUND, "invalid token provided, failed to fetch user");
 
-  const userAuthorised = organizationToUpdate.members.includes(user._id) || user.role === "ADMIN";
-  if (!userAuthorised) throw new ApiError(UNAUTHORIZED, "access denied, you arent authorised to perform this action");
+  // check is user is a organizor
+  if (!isOrganizor(user.role)) throw new ApiError(UNAUTHORIZED, "unauthorized to perform this action");
 
   const highlight = await Highlight.create(validated);
 
@@ -50,16 +46,12 @@ export const updateHighlightByID = async (req: AuthenticatedRequest, res: Respon
 
   if (!userID) throw new ApiError(UNAUTHORIZED, "Bad request, userID is missing");
 
-  // check if such organization exist or not
-  const organizationToUpdate = await Organization.findOne({ slug: "dsa" });
-  if (!organizationToUpdate) throw new ApiError(NOT_FOUND, "invalid slug provided, to find organization");
-
   // check if authenticated user is in the organization
   const user = await User.findById(userID);
   if (!user) throw new ApiError(NOT_FOUND, "invalid token provided, failed to fetch user");
 
-  const userAuthorised = organizationToUpdate.members.includes(user._id) || user.role === "ADMIN";
-  if (!userAuthorised) throw new ApiError(UNAUTHORIZED, "access denied, you arent authorised to perform this action");
+  // check is user is a organizor
+  if (!isOrganizor(user.role)) throw new ApiError(UNAUTHORIZED, "unauthorized to perform this action");
 
   const highlight = await Highlight.findByIdAndUpdate(req.params.id, validated, {
     new: true,
@@ -82,16 +74,12 @@ export const deleteHighlightByID = async (req: AuthenticatedRequest, res: Respon
 
   if (!userID) throw new ApiError(UNAUTHORIZED, "Bad request, userID is missing");
 
-  // check if such organization exist or not
-  const organizationToUpdate = await Organization.findOne({ slug: "dsa" });
-  if (!organizationToUpdate) throw new ApiError(NOT_FOUND, "invalid slug provided, to find organization");
-
   // check if authenticated user is in the organization
   const user = await User.findById(userID);
   if (!user) throw new ApiError(NOT_FOUND, "invalid token provided, failed to fetch user");
 
-  const userAuthorised = organizationToUpdate.members.includes(user._id) || user.role === "ADMIN";
-  if (!userAuthorised) throw new ApiError(UNAUTHORIZED, "access denied, you arent authorised to perform this action");
+  // check is user is a organizor
+  if (!isOrganizor(user.role)) throw new ApiError(UNAUTHORIZED, "unauthorized to perform this action");
 
   const highlight = await Highlight.findByIdAndDelete(req.params.id);
 

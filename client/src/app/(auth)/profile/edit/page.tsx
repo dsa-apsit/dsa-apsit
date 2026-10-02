@@ -1,6 +1,6 @@
 "use client";
 
-import { IdCard, IdCardIcon, Lock, User2 } from "lucide-react";
+import { IdCard, IdCardIcon, Key, Lock, User2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
@@ -19,6 +19,7 @@ const ProfileUpdatePage = () => {
   const [updateData, setUpdateData] = useState<{
     moodleID: string;
     password: string;
+    currentPassword: string;
     name: string;
     department: string;
     division: string;
@@ -26,6 +27,7 @@ const ProfileUpdatePage = () => {
   }>({
     moodleID: "",
     password: "",
+    currentPassword: "",
     name: "",
     department: "",
     division: "",
@@ -37,7 +39,7 @@ const ProfileUpdatePage = () => {
   const years = ["FE", "SE", "TE", "BE"];
 
   const router = useRouter();
-  const { isAuth, user, setUser } = useUserStore();
+  const { isAuth, user, setUser, setAuth } = useUserStore();
 
   useEffect(() => {
     if (!user) return;
@@ -48,7 +50,8 @@ const ProfileUpdatePage = () => {
       moodleID: user.moodleID,
       name: user.name,
       year: user.year,
-      password : ""
+      password: "",
+      currentPassword: "",
     });
   }, [user]);
 
@@ -67,20 +70,17 @@ const ProfileUpdatePage = () => {
 
   const handleUpdate = async () => {
     try {
-      const { moodleID, password, name, department, division, year } = updateData;
-
-      if (!moodleID || !name || !department || !division || !year)
-        return toasty("incomplete form cant be submitted");
-
       const { data } = await axiosInstance.patch("/auth/update", updateData, { withCredentials: true });
 
-      Cookie.set("jwt", data.token);
-
+      setUser(data.user);
+      toasty("profile updated successfully");
       router.push("/profile");
     } catch (error: any) {
-       console.log(error.message || error);
+      console.log(error.message || error);
       if (error.message.response.data.errors.length > 0) {
-        return error.response.data.errors.map((err: { path: string; message: string }) => toasty(err.message));
+        return error.response.data.errors.map((err: { path: string; message: string }) =>
+          toasty(`${err.path}, ${err.message}`),
+        );
       }
 
       toasty(error.response.data.message);
@@ -92,9 +92,7 @@ const ProfileUpdatePage = () => {
   }
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center px-6">
-      <div className="absolute inset-0 -z-10 bg-[#131F43] [mask-image:linear-gradient(to_bottom,white,transparent)]" />
-
+    <section className=" min-h-screen flex items-center justify-center px-6   [mask-image:linear-gradient(to_bottom,white)] bg-[#131F43]">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -110,28 +108,6 @@ const ProfileUpdatePage = () => {
         {/* Basic Info */}
         <div className="flex flex-col gap-8">
           <motion.div
-            custom={0}
-            variants={fieldVariants}
-            initial="hidden"
-            animate="visible"
-            className="flex items-center gap-4"
-          >
-            <IdCard className="shrink-0" />
-
-            <input
-              className="flex-1 border-0 border-b bg-transparent outline-none uppercase text-lg"
-              placeholder="Moodle ID"
-              value={updateData.moodleID}
-              onChange={(e) =>
-                setUpdateData((p) => ({
-                  ...p,
-                  moodleID: e.target.value.toLowerCase(),
-                }))
-              }
-            />
-          </motion.div>
-
-          <motion.div
             custom={1}
             variants={fieldVariants}
             initial="hidden"
@@ -141,7 +117,7 @@ const ProfileUpdatePage = () => {
             <User2 className="shrink-0" />
 
             <input
-              className="flex-1 border-0 border-b bg-transparent outline-none uppercase text-lg"
+              className="flex-1 border-0 border-b bg-transparent outline-none uppercase text-lg cursor-target"
               placeholder="Full Name"
               value={updateData.name}
               onChange={(e) =>
@@ -237,7 +213,7 @@ const ProfileUpdatePage = () => {
           <Lock className="shrink-0" />
 
           <input
-            className="flex-1 border-0 border-b bg-transparent outline-none uppercase text-lg"
+            className="flex-1 border-0 border-b bg-transparent outline-none uppercase text-lg cursor-target"
             placeholder="New Password"
             type="password"
             value={updateData.password}

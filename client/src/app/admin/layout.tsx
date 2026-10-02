@@ -1,27 +1,18 @@
 "use client";
 
 import { useUserStore } from "@/store/user";
-import React, { ReactNode, useEffect, useState } from "react";
-import NotFound from "../not-found";
 
-const AdminLayout = ({ children }: { children: ReactNode }) => {
-  const [isAdmin, setAdmin] = useState(false);
+import NotFound from "@/app/not-found";
+import { ReactNode } from "react";
 
-  const { user } = useUserStore();
+const AdminRoutesLayout = ({ children }: { children: ReactNode }) => {
+  const { isAuth, user } = useUserStore();
 
-  useEffect(() => {
-    if (!user || user.role === "USER") {
-      return setAdmin(false);
-    }
-
-    setAdmin(true);
-  }, [user]);
-
-  if (!isAdmin) {
-    return <NotFound />;
+  if(isAuth && ["ORGANIZOR", "ADMIN"].includes(user?.role || "")) {
+    return children
   }
 
-  return children;
+  return <NotFound/>
 };
 
-export default AdminLayout;
+export default AdminRoutesLayout;

@@ -32,7 +32,7 @@ const Events = () => {
     getEvents();
   }, [setEventData]);
 
-  if (eventData.length === 0) {
+  if (!eventData || eventData.length === 0) {
     return <LoadingPage />;
   }
 

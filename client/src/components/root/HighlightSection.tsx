@@ -1,4 +1,3 @@
-import { Zalando_Sans_Expanded } from "next/font/google";
 import axiosInstance from "@/services/axios";
 import HighlightComponent from "./HighlightComponent";
 import LoadingPage from "@/app/loading";

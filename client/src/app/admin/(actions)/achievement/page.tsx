@@ -58,7 +58,8 @@ export default function AchievementPage() {
 
       const formData = new FormData();
       formData.append("image", file);
-
+      formData.append("path", "achievements");
+      
       const { data } = await axiosInstance.post("/image-to-url", formData);
 
       return data.url;
