@@ -57,8 +57,6 @@ const LoginPage = () => {
       setUser(data.userExist);
       setAuth(true);
 
-      alert(redirectTo)
-
       if (redirectTo) {
         return redirectTo === "/" || redirectTo === "/login" ? router.push("/profile") : router.push(redirectTo);
       }

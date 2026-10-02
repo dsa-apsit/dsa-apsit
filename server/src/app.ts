@@ -41,6 +41,7 @@ import { User } from "./models/user.model.ts";
 import asyncHandler from "./utils/asyncHandler.ts";
 import { checkAuth } from "./middlewares/auth.middleware.ts";
 import uploadImage, { upload } from "./utils/supabse.ts";
+import { getTeamJson, uploadTeamJson } from "./utils/teams.ts";
 
 app.get(
   "/stats",
@@ -56,10 +57,13 @@ app.use("/auth", AuthRouter);
 app.use("/events", EventsRouter);
 app.use("/feedbacks", FeedbackRouter);
 
-app.use("/achievements", AchivementRouter)
-app.use("/highlights", HighlightRouter)
+app.use("/achievements", AchivementRouter);
+app.use("/highlights", HighlightRouter);
 
-app.post("/image-to-url", checkAuth, upload.single("image"), uploadImage)
+app.post("/image-to-url", checkAuth, upload.single("image"), uploadImage);
+
+app.get("/teams", getTeamJson);
+app.post("/teams", checkAuth, uploadTeamJson);
 
 app.use(errorHandler);
 

@@ -64,12 +64,12 @@ const MemberCard = ({ member, num, onClick }: { member: MemberType; num: number;
               ))}
             </h1>
           </div>
-          <div className="absolute z-20 h-full w-full flex flex-col justify-center items-center">
-            <img src={member.imgUrl} className="h-full w-full object-contain object-center mb-15 md:mb-30" />
+          <div className="absolute z-20 h-full w-full flex flex-col justify-center items-center overflow-hidden">
+            <img src={member.imgUrl} className="h-[95%] w-full object-contain object-bottom overflow-hidden" />
           </div>
           <div className="absolute z-30 h-full w-full flex flex-col justify-end items-end p-1 pr-3 md:pr-5 pb-2 md:pb-5  ">
             <div className="bg-black/20 backdrop-blur w-full px-2 py-1 rounded-lg md:rounded-xl">
-              <h1 className="text-sm md:text-xl capitalize">{member.name}</h1>
+              <h1 className="text-sm md:text-lg capitalize">{member.name}</h1>
               <h2 className={`${globalFont.className} text-xs md:text-sm capitalize`}>{member.type} Team</h2>
             </div>
           </div>

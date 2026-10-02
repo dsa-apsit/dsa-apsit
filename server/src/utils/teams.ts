@@ -36,7 +36,7 @@ const uploadTeamJson = asyncHandler(async (req: AuthenticatedRequest, res: Respo
     });
   }
 
-  const fileName = "team/team.json";
+  const fileName = "teams/team.json";
 
   const { error } = await supabase.storage
     .from(bucketName)
@@ -60,7 +60,7 @@ const uploadTeamJson = asyncHandler(async (req: AuthenticatedRequest, res: Respo
 });
 
 const getTeamJson = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const fileName = "team/team.json";
+  const fileName = "teams/team.json";
 
   const { data, error } = await supabase.storage.from(bucketName).download(fileName);
 
