@@ -8,10 +8,10 @@ const Rootpage = () => {
   return (
     <>
       <LenisProvider>
-        <TeamSection />
         {/* <Hero /> */}
+        {/* <TeamSection /> */}
         {/* <EventSection /> */}
-        {/* <HighlightSection /> */}
+        <HighlightSection />
       </LenisProvider>
     </>
   );

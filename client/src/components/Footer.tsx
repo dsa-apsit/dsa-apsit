@@ -2,106 +2,112 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { useUserStore } from "@/store/user";
-
-const socialLinks = [
-  { name: "instagram", link: "https://www.instagram.com/dsa_apsit" },
-  {
-    name: "linkedin",
-    link: "https://www.linkedin.com/in/dsa-apsit?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
-  },
-  {
-    name: "facebook",
-    link: "https://www.facebook.com/p/Data-Science-Association-APSIT-100085633250918/",
-  },
-];
-
-const navLinks = [
-  { name: "register", link: "/register" },
-  { name: "profile", link: "/profile" },
-  { name: "home", link: "/" },
-];
-
-const adminControls = [
-  { name: "events", link: "/events/create" },
-  { name: "achievements", link: "/admin/achievements" },
-  { name: "highlights", link: "/admin/highlights" },
-];
-
-const adminTools = [
-  { name: "Image to Url", link: "/admin/tools/img" },
-  { name: "Url to QR", link: "/events/ssb/feedback" },
-  { name: "Team Access", link: "/admin/team" },
-];
-
-const FooterSection = ({ title, links }: { title: string; links: { name: string; link: string }[] }) => (
-  <div className="flex flex-col items-start gap-3 mt-8 border-t lg:border-0 pt-3">
-    <span>{title}</span>
-
-    {links.map((item) => (
-      <Link
-        key={item.link}
-        href={item.link}
-        target={item.link.startsWith("http") ? "_blank" : undefined}
-        className="underline capitalize"
-      >
-        {item.name}
-      </Link>
-    ))}
-  </div>
-);
 
 const Footer = () => {
-  const { user } = useUserStore();
+  const socialLinks = [
+    {
+      name: "Instagram",
+      link: "https://www.instagram.com/dsa_apsit",
+    },
+    {
+      name: "LinkedIn",
+      link: "https://www.linkedin.com/in/dsa-apsit",
+    },
+    {
+      name: "Facebook",
+      link: "https://www.facebook.com/p/Data-Science-Association-APSIT-100085633250918/",
+    },
+    {
+      name: "Github",
+      link: "https://github.com/dsa-apsit",
+    },
+  ];
 
-  const isAdmin = user && user.role !== "USER";
+  const navLinks = [
+    { name: "Home", link: "/" },
+    { name: "Register", link: "/register" },
+    { name: "Login", link: "/login" },
+    { name: "Profile", link: "/profile" },
+  ];
 
   return (
-    <>
-      <footer
-        id="socials"
-        className="w-screen min-h-[40vh] md:h-[30vh] p-2 flex flex-col md:flex-row justify-around items-center overflow-hidden"
-      >
-        {/* Logo */}
-        <div className="w-full md:w-[35%] flex flex-col">
-          <span className="text-8xl md:text-9xl text-red-600 tracking-widest flex">
-            {"DSA".split("").map((letter) => (
-              <motion.span
-                key={letter}
-                whileHover={{ y: -2, scale: 1.2 }}
-                className="font-extrabold inline-block cursor-pointer"
-              >
-                {letter}
-              </motion.span>
-            ))}
-          </span>
+    <footer id="socials" className="w-full px-4 md:px-8 pb-10 overflow-hidden">
+      <div className="border-b border-current/20 pb-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <Link
+          href="https://ssb.is-a.dev"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs uppercase tracking-[0.3em] hover:text-red-600 transition"
+        >
+          made by shree
+        </Link>
+      </div>
 
-          <p className="text-sm md:text-base">Representing the finest of Data Science department.</p>
+      <div className="flex flex-col md:flex-row justify-between gap-12 md:gap-8 py-12">
+        <motion.div
+          initial={{ letterSpacing: "-0.08em" }}
+          whileInView={{ letterSpacing: "-0.03em" }}
+          viewport={{ once: true }}
+          className="text-[30vw] md:text-[15vw] leading-[0.7] font-black text-red-600 select-none"
+        >
+          D S A
+        </motion.div>
+
+        <div className="w-full md:w-[45%] flex justify-start md:justify-between gap-12">
+          <div className="flex flex-col">
+            <p className="mb-5 text-[10px] uppercase tracking-[0.3em] opacity-40">Navigate</p>
+
+            <div className="flex flex-col flex-wrap gap-2">
+              {navLinks.map((item) => (
+                <Link
+                  key={item.link}
+                  href={item.link}
+                  className="group flex items-center gap-2 text-base md:text-lg hover:text-red-600 transition-colors"
+                >
+                  <span className="w-0 overflow-hidden opacity-0 group-hover:w-3 group-hover:opacity-100 transition-all">
+                    →
+                  </span>
+                  {item.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col">
+            <p className="mb-5 text-[10px] uppercase tracking-[0.3em] opacity-40">Connect</p>
+
+            <div className="flex flex-col gap-2">
+              {socialLinks.map((item) => (
+                <Link
+                  key={item.link}
+                  href={item.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center gap-2 text-base md:text-lg hover:text-red-600 transition-colors"
+                >
+                  <span className="w-0 overflow-hidden opacity-0 group-hover:w-3 group-hover:opacity-100 transition-all">
+                    ↗
+                  </span>
+                  {item.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <p className="hidden lg:block text-black max-w-[180px] text-xs leading-relaxed">
+            A student-driven community exploring technology, data, and everything interesting.
+          </p>
         </div>
+      </div>
 
-        {/* Links */}
-        <div className={`w-[90%] md:w-[60%] grid gap-8 ${isAdmin ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2"}`}>
-          <FooterSection title="Follow Us" links={socialLinks} />
-          <FooterSection title="Navigate" links={navLinks} />
+      <div className="border-t pt-2 border-current/20">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] md:text-xs uppercase tracking-[0.3em] opacity-40">Data Science Association</span>
 
-          {isAdmin && (
-            <>
-              <FooterSection title="Admin Controls" links={adminControls} />
-
-              <FooterSection title="Admin Utils" links={adminTools} />
-            </>
-          )}
+          <span className="text-[10px] md:text-xs uppercase tracking-[0.3em] opacity-40">APSIT</span>
         </div>
-      </footer>
-
-      <Link
-        href="https://www.linkedin.com/in/shree-bavachikar-a16493375/"
-        target="_blank"
-        className="flex justify-center my-16 text-md uppercase tracking-[0.45em] opacity-60 hover:opacity-100 transition"
-      >
-        SHREE MADE THAT ✌
-      </Link>
-    </>
+      </div>
+    </footer>
   );
 };
 
