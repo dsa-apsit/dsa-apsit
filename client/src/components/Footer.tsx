@@ -48,9 +48,9 @@ const Footer = () => {
           initial={{ letterSpacing: "-0.08em" }}
           whileInView={{ letterSpacing: "-0.03em" }}
           viewport={{ once: true }}
-          className="text-[30vw] md:text-[15vw] leading-[0.7] font-black text-red-600 select-none"
+          className="text-[25vw] md:text-[15vw] leading-[0.7] font-black text-red-600 select-none"
         >
-          D S A
+          DSA
         </motion.div>
 
         <div className="w-full md:w-[45%] flex justify-start md:justify-between gap-12">
